@@ -93,6 +93,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bo
             )
         )
 
+    # Seed on hand comes from a Simple Inventory inventory, read again
+    # whenever its sensor changes (an item added, used up or edited).
+    if seed_inventory := manager.seed_inventory:
+        manager.async_seed_inventory_changed()
+        entry.async_on_unload(
+            async_track_state_change_event(
+                hass, [seed_inventory], manager.async_seed_inventory_changed
+            )
+        )
+
     # The plant catalogue downloads in the background: setup never waits on it,
     # and existing plantings keep their own copy of their plant's record.
     async def update_catalogue(_now: datetime | None = None) -> None:

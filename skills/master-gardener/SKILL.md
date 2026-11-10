@@ -162,8 +162,11 @@ and tell the user.
    area whose `soil` says water or fertilizer is needed, with the reason.
 4. For planning ahead: `list_tasks` with `show: upcoming` and `days: 14`.
    Sowing and ordering tasks need lead time; raise those early.
-5. If the user has a seed or supply inventory in Home Assistant, check it
-   before telling them to sow something.
+5. Seed: if `get_garden` has a `seed_inventory`, the sowing tasks already
+   say what seed is on hand, and a **Get seed for …** task (kind
+   `order_seed`) is due six weeks before any sowing with no usable seed.
+   Raise those early: seed takes time to arrive. If there is no seed
+   inventory, ask before telling the user to sow something.
 6. Mention any **Buy …** item or project due now: this year's build plan
    expects it in this window.
 
@@ -201,6 +204,22 @@ is in the ground. If several plants match, ask which, or pick the plain
 species when the user did not name a variety. Check the `care_profile` in the
 response; if a tree or shrub came back with none, set one that fits (see
 `care_profiles`) so it gets pruning and feeding tasks.
+
+### "I bought seed" / "I have these seeds"
+
+Seed is kept in the user's Simple Inventory seed inventory (the
+`seed_inventory.entity` in `get_garden`; its inventory is named on that
+sensor). Add it there with `simple_inventory.add_item`, not to Master
+Gardener: one item per variety, named as the user calls it ("Sungold
+tomato"), with `quantity` and `unit` (packets, grams). Set `expiry_date` so
+old seed is flagged: the packed-for year plus roughly how long that seed
+stays good, then the end of that year. As a guide: onion, leek, parsnip,
+parsley, sweetcorn 1-2 years; pepper, carrot, pea, bean, spinach 2-3;
+lettuce, beet, chard, brassicas, squash, cucumber, tomato 4-5. Say it is an
+estimate. Master Gardener rereads the inventory as soon as it changes.
+
+If the user has no seed inventory and wants one, explain how to create one in
+Simple Inventory and pick its sensor under **Configure** in Master Gardener.
 
 ## A scheduled check-in
 

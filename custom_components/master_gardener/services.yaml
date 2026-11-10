@@ -1,6 +1,6 @@
 get_garden:
   name: Get garden
-  description: Return the whole garden at a glance - climate and frost dates, this year's budget, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
+  description: Return the whole garden at a glance - climate and frost dates and where they came from, this year's budget, the seed on hand, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
 
 list_tasks:
   name: List tasks
