@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import re
-from collections import Counter
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
@@ -68,6 +67,7 @@ from .const import (
 )
 from .engine import frost_normals
 from .engine.climate import frost_dates_for_zone
+from .engine.matching import names_match, rank_candidates
 from .engine.plantdb import name_forms
 from .manage_flow import ManagePlantingsFlow
 
@@ -312,6 +312,14 @@ class SiteOptionsFlow(OptionsFlow):
                 place = await _lookup_zone(self.hass, conf[CONF_ZIP_CODE])
             except (LookupError, aiohttp.ClientError, TimeoutError, ValueError):
                 place = {}
+        if CONF_LATITUDE not in place and (
+            self.hass.config.latitude or self.hass.config.longitude
+        ):
+            # No ZIP code to go by: the garden is presumably at home.
+            place = {
+                CONF_LATITUDE: self.hass.config.latitude,
+                CONF_LONGITUDE: self.hass.config.longitude,
+            }
         if CONF_LATITUDE in place:
             self._normals = await _lookup_frost_normals(
                 self.hass, place[CONF_LATITUDE], place[CONF_LONGITUDE]
@@ -498,41 +506,6 @@ def parse_plant_lines(text: str) -> list[tuple[int, str]]:
             quantity, line = max(1, int(match[1])), match[2]
         lines.append((quantity, line))
     return lines
-
-
-def names_match(typed: str, name: str) -> bool:
-    """Whether what was typed is the plant's name, allowing for a plural."""
-    return name.lower() in name_forms(typed)
-
-
-def _species(record: dict) -> tuple[str, str]:
-    words = record["scientific_name"].replace(chr(215), " ").split()
-    words = [w for w in words if w.lower() != "x"]
-    return (words[0] if words else "", " ".join(words[:2]))
-
-
-def rank_candidates(typed: str, candidates: list[dict]) -> list[dict]:
-    """Likeliest first.
-
-    A plant named for what was typed ("Buddy Boxwood", not "Boxwood Basil"),
-    then one of the genus and species most matches share (a Buxus, not the
-    African boxwood), then the shortest name.
-    """
-    forms = name_forms(typed)
-    genera = Counter(_species(c)[0] for c in candidates)
-    species = Counter(_species(c)[1] for c in candidates)
-
-    def key(record: dict) -> tuple:
-        name = record["common_name"].lower().split(" (")[0]
-        genus, binomial = _species(record)
-        return (
-            not any(name.endswith(form) for form in forms),
-            -genera[genus],
-            -species[binomial],
-            len(name),
-        )
-
-    return sorted(candidates, key=key)
 
 
 def _choice_label(record: dict) -> str:

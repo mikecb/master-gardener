@@ -76,6 +76,9 @@ class Planting:
     not_before: int | None = None
     bought_on: date | None = None
     cost: float | None = None
+    # The seed inventory item this was proposed from, so it is not proposed
+    # again, and accepting it is not a purchase.
+    from_seed: str | None = None
 
     def to_dict(self, *, with_record: bool = True) -> dict:
         """As stored; with_record=False leaves out the bulky plant record."""
@@ -99,6 +102,7 @@ class Planting:
             "not_before": self.not_before,
             "bought_on": _iso(self.bought_on),
             "cost": self.cost,
+            "from_seed": self.from_seed,
         }
 
     @classmethod
@@ -122,6 +126,7 @@ class Planting:
             not_before=data.get("not_before"),
             bought_on=_date(data.get("bought_on")),
             cost=data.get("cost"),
+            from_seed=data.get("from_seed"),
         )
 
 

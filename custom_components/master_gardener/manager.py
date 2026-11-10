@@ -48,6 +48,7 @@ from .engine.care import (
     water_advice,
 )
 from .engine.catalog import Catalog
+from .engine.matching import is_a, plant_words, rank_candidates, shorter_names
 from .engine.models import (
     ACTIVE,
     DONE_PROJECT,
@@ -75,7 +76,7 @@ from .engine.plan import (
 )
 from .engine.planting_rules import care_profile
 from .engine.schedule import IN_GROUND_KINDS, build_tasks
-from .engine.seeds import SeedItem, apply_seed, parse_items
+from .engine.seeds import SeedItem, apply_seed, parse_items, proposals
 from .engine.weather import (
     Alert,
     DayForecast,
@@ -144,7 +145,8 @@ class GardenManager:
         self._snoozed: dict[str, datetime] = {}
         self._care_on: dict[tuple[str, str], bool] = {}
         self.seeds: list[SeedItem] | None = None  # None: not read (yet)
-        self._seed_records: dict[str, dict | None] = {}
+        # seed name -> (catalogue plant, whether it is only the closest one)
+        self._seed_records: dict[str, tuple[dict | None, bool]] = {}
         self.forecast: list[DayForecast] = []
         self._forecast_at: datetime | None = None
         self._listeners: list[CALLBACK_TYPE] = []
@@ -550,15 +552,72 @@ class GardenManager:
         if seeds != self.seeds:
             self.seeds = seeds
             self.async_refresh()
+        self._propose_from_seeds()
 
     async def _async_match_seeds(self, seeds: list[SeedItem]) -> list[SeedItem]:
         """Each seed with the catalogue plant its name is, if any."""
         if not self.plants.ready:
             return seeds
         for name in {s.name for s in seeds} - set(self._seed_records):
-            record, _ = await self.plants.async_resolve(name)
-            self._seed_records[name] = record
-        return [replace(s, record=self._seed_records.get(s.name)) for s in seeds]
+            self._seed_records[name] = await self._async_seed_plant(name)
+        return [
+            replace(
+                s,
+                record=self._seed_records[s.name][0],
+                guessed=self._seed_records[s.name][1],
+            )
+            for s in seeds
+        ]
+
+    async def _async_seed_plant(self, name: str) -> tuple[dict | None, bool]:
+        """The catalogue plant a packet is, or else the closest one.
+
+        Packets name varieties the catalogue may not have ("Blush Cherry
+        Tomato"): then the likeliest plant for ever shorter tails of the
+        name stands in ("cherry tomato", then "tomato").
+        """
+        record, candidates = await self.plants.async_resolve(name)
+        if record:
+            return record, False
+        plain = " ".join(plant_words(name))
+        for text in dict.fromkeys([name, plain, *shorter_names(name)]):
+            if text != name:
+                found, candidates = await self.plants.async_resolve(text)
+                if found and is_a(found, name):
+                    return found, True
+            likely = [c for c in candidates if is_a(c, name)]
+            if likely:
+                return rank_candidates(text, likely)[0], True
+        return None, False
+
+    def _propose_from_seeds(self) -> None:
+        """Propose planting packets whose window is coming up."""
+        if not self.seeds or not self.plants.ready:
+            return
+        areas = [(a.subentry_id, a.data[CONF_STYLE]) for a in self.area_subentries]
+        found = proposals(
+            self.seeds, list(self.plantings.values()), areas, self.site, self.today
+        )
+        for proposal in found:
+            seed = proposal.seed
+            notes = f"Proposed from your seed inventory: {seed.describe()}."
+            if seed.guessed:
+                notes += (
+                    f" Its dates are those of {seed.record['common_name']}, the"
+                    " closest plant in the catalogue."
+                )
+            notes += f" Its window opens {proposal.opens.isoformat()}."
+            planting = self.add_planting_record(
+                proposal.area_id,
+                seed.record,
+                name=seed.name,
+                status=PROPOSED,
+                notes=notes,
+                save=False,
+            )
+            planting.from_seed = seed.name
+        if found:
+            self._changed()
 
     @callback
     def async_seed_inventory_changed(self, *_: object) -> None:
@@ -788,6 +847,7 @@ class GardenManager:
             else:
                 self.seeds = await self._async_match_seeds(self.seeds)
                 self.async_refresh()
+                self._propose_from_seeds()
         return changed
 
     def set_planting_status(
@@ -803,7 +863,9 @@ class GardenManager:
             raise ServiceValidationError(f"No planting with id {planting_id}")
         if status not in PLANTING_STATUSES:
             raise ServiceValidationError(f"Unknown status {status}")
-        if planting.status in (PROPOSED, PLANNED) and status == ACTIVE:
+        if planting.from_seed and planting.status == PROPOSED and status == ACTIVE:
+            planting.added_on = self.today  # grown from seed on hand: no purchase
+        elif planting.status in (PROPOSED, PLANNED) and status == ACTIVE:
             # Bought: its calendar starts now and the cost counts this year.
             planting.added_on = self.today
             planting.bought_on = self.today

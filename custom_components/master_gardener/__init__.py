@@ -102,6 +102,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bo
                 hass, [seed_inventory], manager.async_seed_inventory_changed
             )
         )
+        # Packets are proposed as their windows come near: look daily.
+        entry.async_on_unload(
+            async_track_time_change(
+                hass, manager.async_seed_inventory_changed, hour=6, minute=0, second=0
+            )
+        )
 
     # The plant catalogue downloads in the background: setup never waits on it,
     # and existing plantings keep their own copy of their plant's record.

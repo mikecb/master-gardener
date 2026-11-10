@@ -283,6 +283,7 @@ def _seed_inventory(manager: GardenManager) -> dict:
                     "expiry": seed.expiry.isoformat() if seed.expiry else None,
                     "expired": bool(seed.expiry and seed.expiry < today),
                     "plant": seed.record["slug"] if seed.record else None,
+                    "plant_guessed": seed.guessed,
                 }
                 for seed in manager.seeds or []
             ],
