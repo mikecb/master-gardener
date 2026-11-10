@@ -23,6 +23,7 @@ from .const import (
     CONF_LAST_FROST,
     CONF_MOISTURE_SENSORS,
     CONF_STYLE,
+    CONF_ZONE,
     DOMAIN,
     LOOKAHEAD_DAYS,
     LOOKBACK_DAYS,
@@ -37,7 +38,9 @@ from .engine.care import (
 )
 from .engine.catalog import Catalog
 from .engine.models import PLANTING_STATUSES, Area, CustomTask, Planting, Site, Task
-from .engine.schedule import build_tasks
+from .engine.planting_rules import care_profile
+from .engine.schedule import IN_GROUND_KINDS, build_tasks
+from .plant_store import PlantStore
 
 STORAGE_VERSION = 1
 
@@ -58,11 +61,16 @@ def _month_day(value: str) -> tuple[int, int]:
 
 class GardenManager:
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, catalog: Catalog
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        catalog: Catalog,
+        plants: PlantStore,
     ) -> None:
         self.hass = hass
         self.entry = entry
         self.catalog = catalog
+        self.plants = plants
         self.garden_device_id: str | None = None  # set during entry setup
         self._store: Store[dict] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
@@ -92,6 +100,10 @@ class GardenManager:
             key: datetime.fromisoformat(value)
             for key, value in data.get("snoozed", {}).items()
         }
+        # Plantings from before the plant database named a care profile directly.
+        for planting in self.plantings.values():
+            if not planting.plant_data and planting.plant in self.catalog.profiles:
+                planting.profile = planting.profile or planting.plant
         # Remember when each area was first seen so we never invent a backlog.
         new = [a for a in self.area_subentries if a.subentry_id not in self._area_since]
         for subentry in new:
@@ -104,6 +116,12 @@ class GardenManager:
     @property
     def today(self) -> date:
         return dt_util.now().date()
+
+    @property
+    def zone(self) -> int | None:
+        """The property's USDA hardiness zone number, if setup looked it up."""
+        digits = "".join(c for c in self.entry.data.get(CONF_ZONE, "") if c.isdigit())
+        return int(digits) if digits else None
 
     @property
     def site(self) -> Site:
@@ -243,7 +261,7 @@ class GardenManager:
 
     # --- writing -----------------------------------------------------------
 
-    def add_planting(
+    async def async_add_planting(
         self,
         area_id: str,
         plant: str,
@@ -252,13 +270,30 @@ class GardenManager:
         quantity: int = 1,
         planted_on: date | None = None,
         notes: str = "",
+        profile: str | None = None,
     ) -> Planting:
-        key = self.catalog.match(plant)
+        """Record a planting, looking the plant up in the catalogue."""
+        if not self.plants.ready:
+            raise ServiceValidationError(
+                "The plant catalogue has not been downloaded yet. Try again shortly."
+            )
+        if profile and profile not in self.catalog.profiles:
+            raise ServiceValidationError(f"Unknown care profile {profile}")
+        record, candidates = await self.plants.async_resolve(plant)
+        if record is None and candidates:
+            options = ", ".join(
+                f"{c['slug']} ({c['common_name']})" for c in candidates[:8]
+            )
+            raise ServiceValidationError(
+                f"Several plants match '{plant}'. Use one of these ids: {options}"
+            )
         planting = Planting(
             id=uuid4().hex[:8],
             area_id=area_id,
-            name=name or (self.catalog.plants[key]["name"] if key else plant),
-            plant=key,
+            name=name or (record["common_name"] if record else plant),
+            plant=record["slug"] if record else None,
+            plant_data=record,
+            profile=profile or (care_profile(record) if record else None),
             quantity=quantity,
             planted_on=planted_on,
             added_on=self.today,
@@ -267,6 +302,21 @@ class GardenManager:
         self.plantings[planting.id] = planting
         self._changed()
         return planting
+
+    async def async_update_catalogue(self, force: bool = False) -> bool:
+        """Fetch the plant catalogue if due, then refresh every planting's record."""
+        changed = await self.plants.async_refresh(force)
+        if changed:
+            for planting in self.plantings.values():
+                if not planting.plant:
+                    continue
+                if record := await self.plants.async_get(planting.plant):
+                    planting.plant_data = record
+                    planting.profile = planting.profile or care_profile(record)
+            self._changed()
+        else:
+            self.async_notify()
+        return changed
 
     def set_planting_status(
         self, planting_id: str, status: str, notes: str | None = None
@@ -319,6 +369,9 @@ class GardenManager:
             self._changed()
             return
         task = self._find(task_id)
+        planting = self.plantings.get(task.planting_id or "")
+        if planting and not planting.planted_on and task.kind in IN_GROUND_KINDS:
+            planting.planted_on = self.today  # ticking "plant" records the planting
         if task.series:
             self._last_done[task.series] = self.today
         else:

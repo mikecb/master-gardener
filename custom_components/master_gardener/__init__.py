@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+from datetime import datetime, timedelta
+
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
@@ -9,13 +12,18 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
+    async_track_time_interval,
 )
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
 from .engine.catalog import Catalog
 from .manager import GardenConfigEntry, GardenManager
+from .plant_store import REFRESH_ERRORS, PlantStore
 from .services import async_setup_services
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -34,7 +42,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bool:
     catalog = await hass.async_add_executor_job(Catalog.load)
-    manager = GardenManager(hass, entry, catalog)
+    integration = await async_get_integration(hass, DOMAIN)
+    plants = PlantStore(hass, str(integration.version))
+    await plants.async_load()
+    manager = GardenManager(hass, entry, catalog, plants)
     await manager.async_load()
     entry.runtime_data = manager
 
@@ -64,6 +75,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bo
         entry.async_on_unload(
             async_track_state_change_event(hass, sensors, manager.async_notify)
         )
+
+    # The plant catalogue downloads in the background: setup never waits on it,
+    # and existing plantings keep their own copy of their plant's record.
+    async def update_catalogue(_now: datetime | None = None) -> None:
+        try:
+            await manager.async_update_catalogue()
+        except REFRESH_ERRORS as err:
+            _LOGGER.warning("Could not update the plant catalogue: %s", err)
+
+    entry.async_create_background_task(
+        hass, update_catalogue(), "master_gardener plant catalogue"
+    )
+    entry.async_on_unload(
+        async_track_time_interval(hass, update_catalogue, timedelta(days=1))
+    )
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     return True
 

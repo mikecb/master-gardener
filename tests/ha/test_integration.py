@@ -1,5 +1,6 @@
 """End-to-end tests of the Home Assistant layer."""
 
+from catalogue_helpers import mock_catalogue
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
@@ -12,7 +13,8 @@ FEB_20 = "2027-02-20 12:00:00+00:00"
 
 async def _setup(hass, entry):
     assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    # The plant catalogue downloads in a background task.
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 def _entity_id(hass, entry, platform, key, area=None):
@@ -72,6 +74,7 @@ async def test_config_flow(hass, aioclient_mock):
     assert result["errors"] == {"base": "cannot_connect"}
 
     aioclient_mock.clear_requests()
+    mock_catalogue(aioclient_mock)
     aioclient_mock.get("https://phzmapi.org/22901.json", json={"zone": "7b"})
     result = await configure(flow_id, {"zip_code": " 22901 "})
     assert result["step_id"] == "frost"
@@ -193,7 +196,7 @@ async def test_planting_calendar_todo_and_death(hass, entry, freezer):
     starts = {e["summary"]: e["start"] for e in events}
     assert starts["Start Cherokee Purple indoors"] == "2027-02-18"
     assert starts["Plant Cherokee Purple outdoors"] == "2027-04-22"
-    assert starts["Harvest Cherokee Purple"] == "2027-07-01"
+    assert starts["Harvest Cherokee Purple"] == "2027-06-21"
     assert (
         hass.states.get(calendar).attributes["message"]
         == "Start Cherokee Purple indoors"

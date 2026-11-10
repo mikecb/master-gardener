@@ -10,13 +10,15 @@ from homeassistant.core import (
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .engine.models import PLANTING_STATUSES
+from .engine.planting_rules import care_profile
 from .manager import GardenManager
+from .plant_store import REFRESH_ERRORS
 
 ATTR_AREA = "area"
 
@@ -28,6 +30,14 @@ ADD_PLANTING_SCHEMA = vol.Schema(
         vol.Optional("quantity", default=1): cv.positive_int,
         vol.Optional("planted_on"): cv.date,
         vol.Optional("notes", default=""): cv.string,
+        vol.Optional("care_profile"): cv.string,
+    }
+)
+SEARCH_PLANTS_SCHEMA = vol.Schema(
+    {
+        vol.Required("query"): cv.string,
+        vol.Optional("limit", default=10): vol.All(cv.positive_int, vol.Range(max=50)),
+        vol.Optional("all_zones", default=False): cv.boolean,
     }
 )
 SET_PLANTING_STATUS_SCHEMA = vol.Schema(
@@ -70,21 +80,63 @@ def _area_id(hass: HomeAssistant, manager: GardenManager, device_id: str) -> str
 def async_setup_services(hass: HomeAssistant) -> None:
     async def add_planting(call: ServiceCall) -> ServiceResponse:
         manager = _manager(hass)
-        planting = manager.add_planting(
+        planting = await manager.async_add_planting(
             _area_id(hass, manager, call.data[ATTR_AREA]),
             call.data["plant"],
             name=call.data.get("name"),
             quantity=call.data["quantity"],
             planted_on=call.data.get("planted_on"),
             notes=call.data["notes"],
+            profile=call.data.get("care_profile"),
         )
-        return {**planting.to_dict(), "in_catalog": planting.plant is not None}
+        return {
+            **planting.to_dict(with_record=False),
+            "in_catalog": planting.plant is not None,
+        }
+
+    async def search_plants(call: ServiceCall) -> ServiceResponse:
+        manager = _manager(hass)
+        if not manager.plants.ready:
+            raise ServiceValidationError(
+                "The plant catalogue has not been downloaded yet. Try again shortly."
+            )
+        zone = None if call.data["all_zones"] else manager.zone
+        found = await manager.plants.async_search(
+            call.data["query"], zone, call.data["limit"]
+        )
+        return {
+            "zone": zone,
+            "plants": [
+                {
+                    "id": p["slug"],
+                    "name": p["common_name"],
+                    "scientific_name": p["scientific_name"],
+                    "type": f"{p['category']}: {p['subcategory']}",
+                    "zones": f"{p['usda_zone_min']}-{p['usda_zone_max']}",
+                    "sun": p["sun"],
+                    "water": p["water"],
+                    "height_in": [p["height_in_min"], p["height_in_max"]],
+                    "care_profile": care_profile(p),
+                }
+                for p in found
+            ],
+        }
+
+    async def refresh_catalogue(call: ServiceCall) -> ServiceResponse:
+        manager = _manager(hass)
+        try:
+            await manager.async_update_catalogue(force=True)
+        except REFRESH_ERRORS as err:
+            raise HomeAssistantError(
+                f"Could not download the plant catalogue: {err}"
+            ) from err
+        return dict(manager.plants.meta)
 
     async def set_planting_status(call: ServiceCall) -> ServiceResponse:
         planting = _manager(hass).set_planting_status(
             call.data["planting_id"], call.data["status"], call.data.get("notes")
         )
-        return planting.to_dict()
+        return planting.to_dict(with_record=False)
 
     async def add_task(call: ServiceCall) -> ServiceResponse:
         manager = _manager(hass)
@@ -105,7 +157,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
         )
         return {
             "plantings": [
-                p.to_dict()
+                p.to_dict(with_record=False)
                 for p in manager.plantings.values()
                 if area_id is None or p.area_id == area_id
             ]
@@ -120,6 +172,13 @@ def async_setup_services(hass: HomeAssistant) -> None:
             SupportsResponse.OPTIONAL,
         ),
         ("add_task", add_task, ADD_TASK_SCHEMA, SupportsResponse.OPTIONAL),
+        ("search_plants", search_plants, SEARCH_PLANTS_SCHEMA, SupportsResponse.ONLY),
+        (
+            "refresh_catalogue",
+            refresh_catalogue,
+            vol.Schema({}),
+            SupportsResponse.OPTIONAL,
+        ),
         (
             "list_plantings",
             list_plantings,
