@@ -30,7 +30,11 @@ If an action is refused or missing, say so; do not guess at garden state.
 | `list_plantings` | See what grows where; filter by `area` or `status`. |
 | `search_plants` | Find plants in the catalogue by name and by what a spot needs. |
 | `add_planting` | Record a plant as growing, planned, or proposed. |
-| `set_planting_status` | Accept or reject a proposal; record a death or removal. |
+| `set_planting_status` | Accept a proposal into the plan (`planned`) or plant it (`active`); record a death or removal. |
+| `get_plan` | The build plan: what is to be bought or built in which year, against the budget. |
+| `add_project` | Add non-plant work (path, fence, beds, irrigation) to the build plan. |
+| `set_project_status` | Record a project done (with `cost`), or drop it. |
+| `update_plan_item` | Change an item's `priority`, `tier`, `not_before` year or `estimated_cost`. |
 
 `area` accepts the area's name as the user says it ("Front Walk").
 
@@ -48,6 +52,8 @@ If an action is refused or missing, say so; do not guess at garden state.
 - `care_profiles`: the kinds of upkeep the integration can schedule.
 - `plant_catalogue.ready`: if false, search and adding catalogue plants will
   fail; say so and carry on with what you can.
+- `budget`: the yearly budget (null if none), what has been spent and is
+  planned this year, and how many items wait in the build plan.
 
 ## What the integration decides, so you do not
 
@@ -65,6 +71,11 @@ Do not compute these yourself or contradict them without a reason you state:
   `plants` at risk and a `reason`; the matching task is in `list_tasks`.
 - **Hardiness.** `search_plants` returns only plants hardy in the user's zone
   unless you pass `all_zones: true`.
+- **What is bought when.** `get_plan` places every planned item in a year
+  from its area's build order, its priority and the budget, and says what
+  each one `waits` for. Do not re-plan it by hand; change an item's
+  `priority`, `not_before` or `tier` with `update_plan_item` and read the
+  plan again.
 
 If you believe a date or threshold is wrong for this garden, tell the user
 why and suggest changing the frost dates or the area's thresholds in the
@@ -104,12 +115,31 @@ integration, rather than quietly working around it.
    choices beat a catalogue.
 6. Offer to save them. If the user agrees to consider them, `add_planting`
    with `status: proposed`, `quantity`, `estimated_cost` and the reason in
-   `notes`. When they decide: `set_planting_status` to `active`, or
-   `removed` with a note on why not. Read past rejections before proposing
-   again.
+   `notes`. When they decide: `set_planting_status` to `planned` (yes, buy
+   it when the plan says), `active` (bought or going in now), or `removed`
+   with a note on why not. Read past rejections before proposing again.
 
-If the user has a budget, keep a running total of `estimated_cost` across
-proposals and say what fits this year and what waits.
+Always give an `estimated_cost` you can stand behind: the plan cannot budget
+an unpriced item, and `get_plan` counts them as `unpriced`.
+
+### "What can we afford?" / planning the build-out
+
+1. `get_garden`, then `get_plan`. Report this year first: what is planned,
+   what is spent, what is left. Then the following years in a line each.
+2. For each item that waits, say why in its own terms (`waits`): the budget,
+   a year the user set, or something in its area that must go in first.
+3. If the user wants something sooner, raise its `priority` or lower what
+   competes with it, then read the plan again and say what moved. Do not
+   promise a year the plan does not show.
+4. Hardscape and other non-plant work goes in with `add_project`, with a
+   cost. Trees and paths shape a space; propose them before the perennials
+   that fill it.
+5. If `over_budget` is true for an item, it costs more than a whole year's
+   budget: say so, and suggest splitting it (half the hedge this year) or
+   raising the budget for that year by hand.
+6. When the user reports buying something, `set_planting_status` to
+   `active` with what it really cost in `cost`; for a project,
+   `set_project_status` to `done` with `cost`.
 
 The catalogue is large but machine-compiled and uneven. If a plant you know
 suits the spot is missing, say so and add it by name with a `care_profile`;
@@ -128,6 +158,8 @@ and tell the user.
    Sowing and ordering tasks need lead time; raise those early.
 5. If the user has a seed or supply inventory in Home Assistant, check it
    before telling them to sow something.
+6. Mention any **Buy …** item or project due now: this year's build plan
+   expects it in this window.
 
 ### "I did it"
 
@@ -153,7 +185,8 @@ say so plainly.
 2. Ask what happened if it is not obvious. The cause decides the
    replacement: do not suggest the same plant, or another with the same
    weakness, for the same spot.
-3. Offer a replacement as a proposal.
+3. Offer a replacement as a proposal. If the user wants it, accept it as
+   `planned` so the build plan finds it a year and a budget.
 
 ### "I planted / I'm growing X"
 

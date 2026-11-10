@@ -42,11 +42,15 @@ from .engine.models import (
     DONE,
     DUE,
     OVERDUE,
+    PLANNED,
     PLANTING_STATUSES,
+    PROJECT_STATUSES,
     PROPOSED,
     UPCOMING,
+    Planting,
     Task,
 )
+from .engine.plan import HARDSCAPE, NORMAL, PRIORITIES, TIERS, PlanYear
 from .engine.planting_rules import care_profile
 from .manager import GardenManager
 from .plant_store import REFRESH_ERRORS
@@ -64,6 +68,9 @@ SEARCH_FILTERS = (
     "max_height_in",
 )
 
+COST = vol.All(vol.Coerce(float), vol.Range(min=0))
+YEAR = vol.All(vol.Coerce(int), vol.Range(min=2000, max=2200))
+
 ADD_PLANTING_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_AREA): cv.string,
@@ -73,8 +80,11 @@ ADD_PLANTING_SCHEMA = vol.Schema(
         vol.Optional("planted_on"): cv.date,
         vol.Optional("notes", default=""): cv.string,
         vol.Optional("care_profile"): cv.string,
-        vol.Optional("status", default=ACTIVE): vol.In((ACTIVE, PROPOSED)),
-        vol.Optional("estimated_cost"): vol.All(vol.Coerce(float), vol.Range(min=0)),
+        vol.Optional("status", default=ACTIVE): vol.In((ACTIVE, PROPOSED, PLANNED)),
+        vol.Optional("estimated_cost"): COST,
+        vol.Optional("priority", default=NORMAL): vol.In(PRIORITIES),
+        vol.Optional("tier"): vol.In(TIERS),
+        vol.Optional("not_before"): YEAR,
     }
 )
 SEARCH_PLANTS_SCHEMA = vol.Schema(
@@ -97,6 +107,35 @@ SET_PLANTING_STATUS_SCHEMA = vol.Schema(
         vol.Required("planting_id"): cv.string,
         vol.Required("status"): vol.In(PLANTING_STATUSES),
         vol.Optional("notes"): cv.string,
+        vol.Optional("cost"): COST,
+    }
+)
+ADD_PROJECT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_AREA): cv.string,
+        vol.Required("name"): cv.string,
+        vol.Optional("estimated_cost"): COST,
+        vol.Optional("tier", default=HARDSCAPE): vol.In(TIERS),
+        vol.Optional("priority", default=NORMAL): vol.In(PRIORITIES),
+        vol.Optional("not_before"): YEAR,
+        vol.Optional("notes", default=""): cv.string,
+    }
+)
+SET_PROJECT_STATUS_SCHEMA = vol.Schema(
+    {
+        vol.Required("project_id"): cv.string,
+        vol.Required("status"): vol.In(PROJECT_STATUSES),
+        vol.Optional("cost"): COST,
+        vol.Optional("notes"): cv.string,
+    }
+)
+UPDATE_PLAN_ITEM_SCHEMA = vol.Schema(
+    {
+        vol.Required("item_id"): cv.string,
+        vol.Optional("priority"): vol.In(PRIORITIES),
+        vol.Optional("tier"): vol.In(TIERS),
+        vol.Optional("not_before"): vol.Any(0, YEAR),
+        vol.Optional("estimated_cost"): COST,
     }
 )
 ADD_TASK_SCHEMA = vol.Schema(
@@ -224,6 +263,44 @@ def _area(manager: GardenManager, area: ConfigSubentry, names: dict[str, str]) -
     return out
 
 
+def _plan_year(year: PlanYear, names: dict[str, str]) -> dict:
+    return {
+        "year": year.year,
+        "budget": year.budget,
+        "spent": year.spent,
+        "planned": year.planned,
+        "remaining": year.remaining,
+        "unpriced": year.unpriced,
+        "items": [
+            {
+                "id": p.item.id,
+                "kind": p.item.kind,
+                "name": p.item.name,
+                "area": names.get(p.item.area_id),
+                "tier": p.item.tier,
+                "priority": p.item.priority,
+                "estimated_cost": p.item.cost,
+                "waits": p.reason or None,
+                "over_budget": p.over_budget,
+            }
+            for p in year.placements
+        ],
+    }
+
+
+def _budget(manager: GardenManager) -> dict:
+    """This year's money at a glance."""
+    current = manager.plan()[0]
+    return {
+        "currency": manager.hass.config.currency,
+        "annual_budget": manager.annual_budget,
+        "spent_this_year": current.spent,
+        "planned_this_year": current.planned,
+        "remaining_this_year": current.remaining,
+        "planned_items": len(manager.plan_items()),
+    }
+
+
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
     async def get_garden(call: ServiceCall) -> ServiceResponse:
@@ -248,7 +325,56 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 for key, profile in manager.catalog.profiles.items()
             },
             "areas": [_area(manager, s, names) for s in manager.area_subentries],
+            "budget": _budget(manager),
         }
+
+    async def get_plan(call: ServiceCall) -> ServiceResponse:
+        manager = _manager(hass)
+        names = _names(manager)
+        proposed = [p for p in manager.plantings.values() if p.status == PROPOSED]
+        return {
+            "today": manager.today.isoformat(),
+            **_budget(manager),
+            "years": [_plan_year(y, names) for y in manager.plan()],
+            "undecided_proposals": {
+                "count": len(proposed),
+                "estimated_cost": sum(p.estimated_cost or 0 for p in proposed),
+            },
+        }
+
+    async def add_project(call: ServiceCall) -> ServiceResponse:
+        manager = _manager(hass)
+        project = manager.add_project(
+            _area_id(hass, manager, call.data[ATTR_AREA]),
+            call.data["name"],
+            tier=call.data["tier"],
+            estimated_cost=call.data.get("estimated_cost"),
+            priority=call.data["priority"],
+            not_before=call.data.get("not_before"),
+            notes=call.data["notes"],
+        )
+        return project.to_dict()
+
+    async def set_project_status(call: ServiceCall) -> ServiceResponse:
+        project = _manager(hass).set_project_status(
+            call.data["project_id"],
+            call.data["status"],
+            cost=call.data.get("cost"),
+            notes=call.data.get("notes"),
+        )
+        return project.to_dict()
+
+    async def update_plan_item(call: ServiceCall) -> ServiceResponse:
+        source = _manager(hass).update_plan_item(
+            call.data["item_id"],
+            priority=call.data.get("priority"),
+            tier=call.data.get("tier"),
+            not_before=call.data.get("not_before"),
+            estimated_cost=call.data.get("estimated_cost"),
+        )
+        if isinstance(source, Planting):
+            return source.to_dict(with_record=False)
+        return source.to_dict()
 
     async def add_planting(call: ServiceCall) -> ServiceResponse:
         manager = _manager(hass)
@@ -262,6 +388,9 @@ def async_setup_services(hass: HomeAssistant) -> None:
             profile=call.data.get("care_profile"),
             status=call.data["status"],
             estimated_cost=call.data.get("estimated_cost"),
+            priority=call.data["priority"],
+            tier=call.data.get("tier"),
+            not_before=call.data.get("not_before"),
         )
         return {
             **planting.to_dict(with_record=False),
@@ -314,7 +443,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     async def set_planting_status(call: ServiceCall) -> ServiceResponse:
         planting = _manager(hass).set_planting_status(
-            call.data["planting_id"], call.data["status"], call.data.get("notes")
+            call.data["planting_id"],
+            call.data["status"],
+            call.data.get("notes"),
+            cost=call.data.get("cost"),
         )
         return planting.to_dict(with_record=False)
 
@@ -369,6 +501,20 @@ def async_setup_services(hass: HomeAssistant) -> None:
 
     for name, handler, schema, responds in (
         ("get_garden", get_garden, vol.Schema({}), SupportsResponse.ONLY),
+        ("get_plan", get_plan, vol.Schema({}), SupportsResponse.ONLY),
+        ("add_project", add_project, ADD_PROJECT_SCHEMA, SupportsResponse.OPTIONAL),
+        (
+            "set_project_status",
+            set_project_status,
+            SET_PROJECT_STATUS_SCHEMA,
+            SupportsResponse.OPTIONAL,
+        ),
+        (
+            "update_plan_item",
+            update_plan_item,
+            UPDATE_PLAN_ITEM_SCHEMA,
+            SupportsResponse.OPTIONAL,
+        ),
         ("add_planting", add_planting, ADD_PLANTING_SCHEMA, SupportsResponse.OPTIONAL),
         (
             "set_planting_status",

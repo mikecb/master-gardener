@@ -96,7 +96,13 @@ async def test_get_garden(hass, garden, freezer):
     )
     assert rows["size_sqft"] == 800
     assert rows["next_to"] == ["Front Walk"]
-    assert rows["plantings"] == {"active": 1, "proposed": 0, "dead": 0, "removed": 0}
+    assert rows["plantings"] == {
+        "active": 1,
+        "proposed": 0,
+        "planned": 0,
+        "dead": 0,
+        "removed": 0,
+    }
     assert rows["tasks_due"] == 2  # start tomatoes, and water
     assert rows["soil"]["water"]["needed"] is True
     assert rows["soil"]["water"]["reason"] == "Soil moisture 12% is below 30%"

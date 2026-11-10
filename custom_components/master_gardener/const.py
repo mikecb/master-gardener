@@ -21,6 +21,7 @@ CONF_DRY_BELOW = "dry_below"
 CONF_FEED_BELOW = "feed_below"
 
 CONF_WEATHER_ENTITY = "weather_entity"
+CONF_ANNUAL_BUDGET = "annual_budget"
 
 CARE_WATER = "water"
 CARE_FEED = "feed"

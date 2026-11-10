@@ -1,6 +1,6 @@
 get_garden:
   name: Get garden
-  description: Return the whole garden at a glance - climate and frost dates, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
+  description: Return the whole garden at a glance - climate and frost dates, this year's budget, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
 
 list_tasks:
   name: List tasks
@@ -82,12 +82,13 @@ add_planting:
         date:
     status:
       name: Status
-      description: active is growing or definitely planned and gets tasks. proposed is a suggestion awaiting a decision - it is recorded but gets no tasks until Set planting status makes it active.
+      description: active is growing or about to be planted and gets tasks. planned is agreed but not yet bought - it waits in the build plan for its year and budget. proposed is a suggestion awaiting a decision. Neither planned nor proposed gets tasks until it becomes active.
       default: active
       selector:
         select:
           options:
             - active
+            - planned
             - proposed
     estimated_cost:
       name: Estimated cost
@@ -97,6 +98,34 @@ add_planting:
           min: 0
           max: 1000000
           step: 0.01
+          mode: box
+    priority:
+      name: Priority
+      description: How soon it should happen compared with the rest of the build plan.
+      default: normal
+      selector:
+        select:
+          options:
+            - high
+            - normal
+            - low
+    tier:
+      name: Tier
+      description: Where it falls in the build order of its area. Leave empty to judge it from the plant (trees and shrubs, perennials or small plants).
+      selector:
+        select:
+          options:
+            - trees_shrubs
+            - hardscape
+            - perennials
+            - small_plants
+    not_before:
+      name: Not before
+      description: The earliest year it may be bought or done.
+      selector:
+        number:
+          min: 2000
+          max: 2200
           mode: box
     notes:
       name: Notes
@@ -212,7 +241,7 @@ refresh_catalogue:
 
 set_planting_status:
   name: Set planting status
-  description: Accept a proposed planting (active), turn one down (removed), or report that a planting died or was removed. Tasks stop for anything not active, and losses are kept as history.
+  description: Accept a proposed planting into the build plan (planned) or plant it now (active), turn one down (removed), or report that a planting died or was removed. Making a proposed or planned planting active records it as bought today. Tasks stop for anything not active, and losses are kept as history.
   fields:
     planting_id:
       name: Planting ID
@@ -227,6 +256,7 @@ set_planting_status:
         select:
           options:
             - active
+            - planned
             - proposed
             - dead
             - removed
@@ -236,6 +266,15 @@ set_planting_status:
       selector:
         text:
           multiline: true
+    cost:
+      name: Cost
+      description: What it actually cost, when it is bought. Leave empty to count the estimated cost.
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 0.01
+          mode: box
 
 add_task:
   name: Add task
@@ -280,6 +319,152 @@ list_plantings:
         select:
           options:
             - active
+            - planned
             - proposed
             - dead
             - removed
+
+get_plan:
+  name: Get build plan
+  description: Return the multi-year build plan - every planned planting and project placed in a year by its area's build order (trees and shrubs, then hardscape, then perennials, then small plants), its priority and the annual budget, with what has been spent and what remains this year.
+
+add_project:
+  name: Add project
+  description: Add work that is not a plant to the build plan, e.g. a path, a fence, raised beds or irrigation. It is placed in a year with the planned plantings and appears on the area's to-do list in its year.
+  fields:
+    area:
+      name: Garden area
+      description: Area name or id.
+      required: true
+      selector:
+        device:
+          integration: master_gardener
+    name:
+      name: Name
+      description: What is to be done. Used as the to-do item.
+      required: true
+      example: Lay the flagstone path
+      selector:
+        text:
+    estimated_cost:
+      name: Estimated cost
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 0.01
+          mode: box
+    tier:
+      name: Tier
+      description: Where it falls in the build order of its area.
+      default: hardscape
+      selector:
+        select:
+          options:
+            - trees_shrubs
+            - hardscape
+            - perennials
+            - small_plants
+    priority:
+      name: Priority
+      description: How soon it should happen compared with the rest of the build plan.
+      default: normal
+      selector:
+        select:
+          options:
+            - high
+            - normal
+            - low
+    not_before:
+      name: Not before
+      description: The earliest year it may be bought or done.
+      selector:
+        number:
+          min: 2000
+          max: 2200
+          mode: box
+    notes:
+      name: Notes
+      selector:
+        text:
+          multiline: true
+
+set_project_status:
+  name: Set project status
+  description: Record a project as done (its cost counts against this year's budget), put it back in the plan, or drop it (removed).
+  fields:
+    project_id:
+      name: Project ID
+      description: From the Get build plan action.
+      required: true
+      selector:
+        text:
+    status:
+      name: Status
+      required: true
+      selector:
+        select:
+          options:
+            - planned
+            - done
+            - removed
+    cost:
+      name: Cost
+      description: What it actually cost. Leave empty to count the estimated cost.
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 0.01
+          mode: box
+    notes:
+      name: Notes
+      selector:
+        text:
+          multiline: true
+
+update_plan_item:
+  name: Update plan item
+  description: Change how a planned planting or project is placed in the build plan.
+  fields:
+    item_id:
+      name: Item ID
+      description: A planting or project id, from the Get build plan action.
+      required: true
+      selector:
+        text:
+    priority:
+      name: Priority
+      description: How soon it should happen compared with the rest of the build plan.
+      selector:
+        select:
+          options:
+            - high
+            - normal
+            - low
+    tier:
+      name: Tier
+      description: Where it falls in the build order of its area.
+      selector:
+        select:
+          options:
+            - trees_shrubs
+            - hardscape
+            - perennials
+            - small_plants
+    not_before:
+      name: Not before
+      description: The earliest year it may be bought or done. 0 clears it.
+      selector:
+        number:
+          min: 0
+          max: 2200
+          mode: box
+    estimated_cost:
+      name: Estimated cost
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 0.01
+          mode: box
