@@ -22,6 +22,7 @@ from .const import (
     CARE_FROST,
     CARE_HEAT,
     CARE_WATER,
+    CONF_ANNUAL_BUDGET,
     CONF_CONDUCTIVITY_SENSORS,
     CONF_DRY_BELOW,
     CONF_FEED_BELOW,
@@ -46,13 +47,28 @@ from .engine.care import (
 from .engine.catalog import Catalog
 from .engine.models import (
     ACTIVE,
+    DONE_PROJECT,
+    PLANNED,
     PLANTING_STATUSES,
+    PROJECT_STATUSES,
     PROPOSED,
+    REMOVED,
     Area,
     CustomTask,
     Planting,
+    Project,
     Site,
     Task,
+)
+from .engine.plan import (
+    KIND_PLANTING,
+    KIND_PROJECT,
+    PERENNIALS,
+    PlanItem,
+    PlanYear,
+    build_plan,
+    plan_task,
+    planting_tier,
 )
 from .engine.planting_rules import care_profile
 from .engine.schedule import IN_GROUND_KINDS, build_tasks
@@ -117,6 +133,7 @@ class GardenManager:
         )
         self.plantings: dict[str, Planting] = {}
         self.custom_tasks: dict[str, CustomTask] = {}
+        self.projects: dict[str, Project] = {}
         self._completions: dict[str, date] = {}
         self._last_done: dict[str, date] = {}
         self._area_since: dict[str, date] = {}
@@ -134,6 +151,9 @@ class GardenManager:
         }
         self.custom_tasks = {
             t["id"]: CustomTask.from_dict(t) for t in data.get("custom_tasks", [])
+        }
+        self.projects = {
+            p["id"]: Project.from_dict(p) for p in data.get("projects", [])
         }
         self._completions = _dates(data.get("completions", {}))
         self._last_done = _dates(data.get("last_done", {}))
@@ -191,7 +211,7 @@ class GardenManager:
             )
             for s in self.area_subentries
         ]
-        return build_tasks(
+        tasks = build_tasks(
             site=self.site,
             areas=areas,
             plantings=list(self.plantings.values()),
@@ -203,6 +223,9 @@ class GardenManager:
             end=end,
             today=self.today,
         )
+        tasks += [t for t in self._plan_tasks() if t.end >= start and t.start <= end]
+        tasks.sort(key=lambda t: (t.start, t.end, t.title))
+        return tasks
 
     def tasks(self, area_id: str | None = None) -> list[Task]:
         """Tasks around today (cached), optionally for one area."""
@@ -310,6 +333,195 @@ class GardenManager:
                     )
                 )
         return tasks
+
+    # --- build plan --------------------------------------------------------
+
+    @property
+    def annual_budget(self) -> float | None:
+        """What may be spent on the garden each year, if a budget is set."""
+        return self.entry.options.get(CONF_ANNUAL_BUDGET) or None
+
+    def spent(self, year: int) -> float:
+        """What plantings bought and projects finished in a year cost."""
+        return sum(
+            p.cost or 0
+            for p in self.plantings.values()
+            if p.bought_on and p.bought_on.year == year
+        ) + sum(
+            p.cost or 0
+            for p in self.projects.values()
+            if p.done_on and p.done_on.year == year
+        )
+
+    def plan_items(self) -> list[PlanItem]:
+        """Everything planned and not yet bought or done."""
+        items = [
+            PlanItem(
+                id=p.id,
+                area_id=p.area_id,
+                name=p.name,
+                tier=p.tier or planting_tier(p.plant_data, p.profile),
+                priority=p.priority,
+                cost=p.estimated_cost,
+                not_before=p.not_before,
+                added_on=p.added_on,
+            )
+            for p in self.plantings.values()
+            if p.status == PLANNED
+        ]
+        items += [
+            PlanItem(
+                id=p.id,
+                area_id=p.area_id,
+                name=p.name,
+                tier=p.tier,
+                kind=KIND_PROJECT,
+                priority=p.priority,
+                cost=p.estimated_cost,
+                not_before=p.not_before,
+                added_on=p.added_on,
+            )
+            for p in self.projects.values()
+            if p.status == PLANNED
+        ]
+        areas = {a.subentry_id for a in self.area_subentries}
+        return [i for i in items if i.area_id in areas]
+
+    def plan(self) -> list[PlanYear]:
+        year = self.today.year
+        return build_plan(
+            self.plan_items(),
+            this_year=year,
+            budget=self.annual_budget,
+            spent=self.spent(year),
+        )
+
+    def _plan_tasks(self) -> list[Task]:
+        """This year's purchases: open ones from the plan, and those made."""
+        year = self.today.year
+        site = self.site
+        (current, *_) = self.plan()
+        # Open purchases, then those already made this year (kept ticked, so
+        # unticking one can undo it).
+        wanted: list[tuple[PlanItem, date | None]] = [
+            (p.item, None) for p in current.placements
+        ]
+        for planting in self.plantings.values():
+            if planting.bought_on and planting.bought_on.year == year:
+                wanted.append((self._as_item(planting), planting.bought_on))
+        for project in self.projects.values():
+            if project.done_on and project.done_on.year == year:
+                wanted.append((self._as_item(project), project.done_on))
+        areas = {a.subentry_id for a in self.area_subentries}
+        tasks = []
+        for item, completed_on in wanted:
+            if item.area_id not in areas:
+                continue
+            planting = self.plantings.get(item.id)
+            tasks.append(
+                plan_task(
+                    item,
+                    record=planting.plant_data if planting else None,
+                    quantity=planting.quantity if planting else 1,
+                    site=site,
+                    year=year,
+                    completed_on=completed_on,
+                )
+            )
+        return tasks
+
+    @staticmethod
+    def _as_item(source: Planting | Project) -> PlanItem:
+        """A bought planting or finished project, shaped for its to-do item."""
+        is_project = isinstance(source, Project)
+        return PlanItem(
+            id=source.id,
+            area_id=source.area_id,
+            name=source.name,
+            tier=source.tier or PERENNIALS,
+            kind=KIND_PROJECT if is_project else KIND_PLANTING,
+            cost=source.cost,
+        )
+
+    def _plan_source(self, item_id: str) -> Planting | Project:
+        source = self.plantings.get(item_id) or self.projects.get(item_id)
+        if source is None:
+            raise ServiceValidationError(f"No planting or project with id {item_id}")
+        return source
+
+    def add_project(
+        self,
+        area_id: str,
+        name: str,
+        *,
+        tier: str = "hardscape",
+        estimated_cost: float | None = None,
+        priority: str = "normal",
+        not_before: int | None = None,
+        notes: str = "",
+    ) -> Project:
+        project = Project(
+            id=uuid4().hex[:8],
+            area_id=area_id,
+            name=name,
+            tier=tier,
+            estimated_cost=estimated_cost,
+            priority=priority,
+            not_before=not_before,
+            notes=notes,
+            added_on=self.today,
+        )
+        self.projects[project.id] = project
+        self._changed()
+        return project
+
+    def set_project_status(
+        self,
+        project_id: str,
+        status: str,
+        *,
+        cost: float | None = None,
+        notes: str | None = None,
+    ) -> Project:
+        project = self.projects.get(project_id)
+        if project is None:
+            raise ServiceValidationError(f"No project with id {project_id}")
+        if status not in PROJECT_STATUSES:
+            raise ServiceValidationError(f"Unknown status {status}")
+        if status == DONE_PROJECT and project.status != DONE_PROJECT:
+            project.done_on = self.today
+            project.cost = cost if cost is not None else project.estimated_cost
+        elif status != DONE_PROJECT:
+            project.done_on = project.cost = None
+        elif cost is not None:
+            project.cost = cost
+        project.status = status
+        if notes:
+            project.notes = f"{project.notes}\n{notes}".strip()
+        self._changed()
+        return project
+
+    def update_plan_item(
+        self,
+        item_id: str,
+        *,
+        priority: str | None = None,
+        tier: str | None = None,
+        not_before: int | None = None,
+        estimated_cost: float | None = None,
+    ) -> Planting | Project:
+        """Change how a planting or project is placed in the build plan."""
+        source = self._plan_source(item_id)
+        if priority:
+            source.priority = priority
+        if tier:
+            source.tier = tier
+        if not_before is not None:
+            source.not_before = not_before or None  # 0 clears it
+        if estimated_cost is not None:
+            source.estimated_cost = estimated_cost
+        self._changed()
+        return source
 
     # --- weather -----------------------------------------------------------
 
@@ -424,6 +636,9 @@ class GardenManager:
         profile: str | None = None,
         status: str = ACTIVE,
         estimated_cost: float | None = None,
+        priority: str = "normal",
+        tier: str | None = None,
+        not_before: int | None = None,
     ) -> Planting:
         """Record a planting, looking the plant up in the catalogue."""
         if not self.plants.ready:
@@ -453,6 +668,9 @@ class GardenManager:
             status=status,
             notes=notes,
             estimated_cost=estimated_cost,
+            priority=priority,
+            tier=tier,
+            not_before=not_before,
         )
         self.plantings[planting.id] = planting
         self._changed()
@@ -474,15 +692,27 @@ class GardenManager:
         return changed
 
     def set_planting_status(
-        self, planting_id: str, status: str, notes: str | None = None
+        self,
+        planting_id: str,
+        status: str,
+        notes: str | None = None,
+        *,
+        cost: float | None = None,
     ) -> Planting:
         planting = self.plantings.get(planting_id)
         if planting is None:
             raise ServiceValidationError(f"No planting with id {planting_id}")
         if status not in PLANTING_STATUSES:
             raise ServiceValidationError(f"Unknown status {status}")
-        if planting.status == PROPOSED and status == ACTIVE:
-            planting.added_on = self.today  # its calendar starts on acceptance
+        if planting.status in (PROPOSED, PLANNED) and status == ACTIVE:
+            # Bought: its calendar starts now and the cost counts this year.
+            planting.added_on = self.today
+            planting.bought_on = self.today
+            planting.cost = cost if cost is not None else planting.estimated_cost
+        elif status in (PROPOSED, PLANNED):
+            planting.bought_on = planting.cost = None
+        elif cost is not None:
+            planting.cost = cost
         planting.status = status
         if notes:
             planting.notes = f"{planting.notes}\n{notes}".strip()
@@ -525,6 +755,9 @@ class GardenManager:
             self._snoozed[task_id] = dt_util.utcnow() + CARE_SNOOZE[kind]
             self._changed()
             return
+        if task_id.startswith("plan:"):
+            self._buy(task_id)
+            return
         task = self._find(task_id)
         planting = self.plantings.get(task.planting_id or "")
         if planting and not planting.planted_on and task.kind in IN_GROUND_KINDS:
@@ -536,11 +769,39 @@ class GardenManager:
         self._changed()
 
     def reopen(self, task_id: str) -> None:
+        if task_id.startswith("plan:"):
+            source = self._plan_source(task_id.split(":")[1])
+            if source.status in (ACTIVE, DONE_PROJECT):
+                if isinstance(source, Project):
+                    self.set_project_status(source.id, PLANNED)
+                else:
+                    self.set_planting_status(source.id, PLANNED)
+            return
         if self._completions.pop(task_id, None):
             self._changed()
 
+    def _buy(self, task_id: str) -> None:
+        """A purchase from the plan was made, or a project done."""
+        source = self._plan_source(task_id.split(":")[1])
+        if source.status != PLANNED:
+            return  # already bought
+        if isinstance(source, Project):
+            self.set_project_status(source.id, DONE_PROJECT)
+        else:
+            self.set_planting_status(source.id, ACTIVE)
+
     def delete(self, task_id: str) -> None:
         """Remove a hand-added task; dismiss a generated one."""
+        if task_id.startswith("plan:"):
+            # Deleting a purchase means not buying it: drop it from the plan.
+            source = self._plan_source(task_id.split(":")[1])
+            if source.status == PLANNED:
+                note = "Taken off the build plan from the to-do list."
+                if isinstance(source, Project):
+                    self.set_project_status(source.id, REMOVED, notes=note)
+                else:
+                    self.set_planting_status(source.id, REMOVED, note)
+            return
         if self.custom_tasks.pop(task_id.removeprefix("custom:"), None):
             self._completions.pop(task_id, None)
             self._changed()
@@ -586,6 +847,7 @@ class GardenManager:
         return {
             "plantings": [p.to_dict() for p in self.plantings.values()],
             "custom_tasks": [t.to_dict() for t in self.custom_tasks.values()],
+            "projects": [p.to_dict() for p in self.projects.values()],
             "completions": _isos(self._completions),
             "last_done": _isos(self._last_done),
             "area_since": _isos(self._area_since),

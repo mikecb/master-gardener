@@ -30,14 +30,16 @@
   "options": {
     "step": {
       "init": {
-        "title": "Your climate",
+        "title": "Your climate and budget",
         "data": {
           "last_frost": "Average last spring frost",
           "first_frost": "Average first autumn frost",
-          "weather_entity": "Weather forecast"
+          "weather_entity": "Weather forecast",
+          "annual_budget": "Yearly garden budget"
         },
         "data_description": {
-          "weather_entity": "Optional. Its forecast holds off watering when rain is coming and warns when frost or heat threatens what you have planted."
+          "weather_entity": "Optional. Its forecast holds off watering when rain is coming and warns when frost or heat threatens what you have planted.",
+          "annual_budget": "Optional. What you mean to spend on plants and projects each year. The build plan spreads planned purchases over the years to stay within it. Leave empty for no limit."
         }
       }
     },
@@ -164,6 +166,13 @@
       "plant_catalogue": {
         "name": "Plant catalogue",
         "unit_of_measurement": "plants"
+      },
+      "budget_remaining": {
+        "name": "Budget left this year"
+      },
+      "planned_this_year": {
+        "name": "Planned this year",
+        "unit_of_measurement": "items"
       }
     }
   }

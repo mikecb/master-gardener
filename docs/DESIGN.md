@@ -23,6 +23,7 @@ custom_components/master_gardener/
     schedule.py         areas + plantings + frost dates -> dated tasks
     care.py             soil readings -> needs water / needs fertilizer
     weather.py          forecast -> rain hold-off, frost and heat alerts
+    plan.py             wishlist + budget -> purchases by year, buy windows
   manager.py     state, persistence (.storage), cache, change notifications
   config_flow.py property frost dates; one config subentry per garden area
   calendar.py / todo.py / sensor.py / services.py   thin HA surface
@@ -50,8 +51,14 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 - **Planting**: a plant (OpenPlantDB id or free text) in an area, with its
   own copy of the plant's record and a care profile, so the calendar works
   with no catalogue on disk. Also quantity,
-  planted date and status `active | dead | removed`. Dead plantings are kept:
-  they are evidence for future recommendations.
+  planted date and status `active | proposed | planned | dead | removed`.
+  Dead plantings are kept: they are evidence for future recommendations.
+  `planned` is agreed and waiting in the build plan; it carries a priority,
+  an optional tier override and earliest year, and once bought the date and
+  what it cost.
+- **Project**: build-plan work that is not a plant (path, fence, beds), with
+  tier (hardscape by default), estimated cost, priority, status
+  `planned | done | removed`, and when it was done and for what.
 - **Task**: generated, never stored. Only completions are stored, so changing a
   frost date or a catalog rule reshapes the whole calendar. States:
   upcoming, due, overdue, done.
@@ -98,6 +105,31 @@ twice-daily or hourly entries into one record per local day, in °C and mm.
 - A forecast that cannot be refreshed for six hours is dropped; the frost and
   heat sensors then read unknown rather than a stale "no risk".
 
+### Build plan rules
+
+The plan, like the calendar, is never stored: `engine/plan.py` works it out
+from the planned plantings and projects, the yearly budget and what has been
+spent this year.
+
+- Four tiers: trees and shrubs, hardscape, perennials, small plants. A
+  plant's tier comes from its care profile and type (tree, shrub, conifer,
+  hedge), else perennial or not. Within an area nothing is placed in an
+  earlier year than an item of an earlier tier; same-year is allowed.
+  Areas do not hold each other up.
+- Items are taken by priority, then tier, then date added. Each item's
+  priority is raised to the highest of the later-tier items in its area, so
+  what an urgent item waits on is placed first.
+- Each item goes in the first year at or after its floor (this year, its
+  `not_before`, the year of what it waits on) with room left. An item dearer
+  than the whole budget takes the first untouched year and is flagged.
+  Unpriced items take no budget and are counted. No budget (or 0): every
+  item is this year.
+- This year's items become tasks: a plant's purchase runs the six weeks
+  before its first planting window (next season's if that falls before
+  January), anything else from four weeks before the last frost to the first
+  frost. Purchases made this year stay as completed tasks, so unticking one
+  undoes it.
+
 ## Roadmap
 
 1. **Areas + calendar (built).** Areas, plantings, frost-anchored task
@@ -117,11 +149,14 @@ twice-daily or hourly entries into one record per local day, in °C and mm.
    searching the catalogue and saving proposals. Still to do: pull public data
    for the property (frost normals replacing the zone estimate, soil survey,
    sun path) and expose seeds on hand.
-4. **Multi-year build plan and budget.** Wishlist items with cost and a
-   structural tier (trees and shrubs, then hardscape, then perennials and
-   small plants). The engine orders purchases across years under an annual
-   budget and user priorities; deaths and overdue feedback reshuffle it.
-   Seed and plant inventory.
+4. **Multi-year build plan and budget (mostly built).** Built: planned
+   plantings and projects with cost, priority and a structural tier (trees
+   and shrubs, then hardscape, then perennials and small plants); the engine
+   orders them across years under an annual budget, and this year's
+   purchases appear as to-do items that record what was spent. Any change
+   to the wishlist, spending or budget reshuffles the plan. Still to do:
+   seed and plant inventory, and replacing a dead planting through the plan
+   (today the agent proposes the replacement).
 5. **Adaptive maintenance.** Repeated "overdue" feedback tightens an interval;
    repeated early completion loosens it. Care profiles for shrubs and vines.
 6. **Custom panel.** Property map, per-area planting plans, roadmap and budget
@@ -143,6 +178,8 @@ twice-daily or hourly entries into one record per local day, in °C and mm.
   estimate with station frost normals.
 - The ZIP code cannot be changed after setup; only the frost dates can.
 - Overdue feedback creates a task; it does not yet change the schedule.
+- The budget is one amount for every year, in Home Assistant's currency; it
+  does not inflate or carry unspent money forward.
 - Frost and heat alerts trust the forecast's daily low and high as given, and
   the catalogue's frost tolerance; a plant with no catalogue record gets no
   frost alert.

@@ -8,9 +8,14 @@ from datetime import date
 ACTIVE = "active"
 # Suggested (by an advisor) but not agreed: recorded, no tasks until accepted.
 PROPOSED = "proposed"
+# Agreed and waiting in the build plan to be bought: no tasks until then.
+PLANNED = "planned"
 DEAD = "dead"
 REMOVED = "removed"
-PLANTING_STATUSES = (ACTIVE, PROPOSED, DEAD, REMOVED)
+PLANTING_STATUSES = (ACTIVE, PROPOSED, PLANNED, DEAD, REMOVED)
+# Projects (hardscape and other work that is not a plant).
+DONE_PROJECT = "done"
+PROJECT_STATUSES = (PLANNED, DONE_PROJECT, REMOVED)
 
 UPCOMING = "upcoming"
 DUE = "due"
@@ -62,6 +67,13 @@ class Planting:
     status: str = ACTIVE
     notes: str = ""
     estimated_cost: float | None = None  # for the whole quantity
+    # Build plan: how urgent, which structural tier (None: from the plant),
+    # the earliest year it may be bought, and when it was bought and for what.
+    priority: str = "normal"
+    tier: str | None = None
+    not_before: int | None = None
+    bought_on: date | None = None
+    cost: float | None = None
 
     def to_dict(self, *, with_record: bool = True) -> dict:
         """As stored; with_record=False leaves out the bulky plant record."""
@@ -79,6 +91,11 @@ class Planting:
             "status": self.status,
             "notes": self.notes,
             "estimated_cost": self.estimated_cost,
+            "priority": self.priority,
+            "tier": self.tier,
+            "not_before": self.not_before,
+            "bought_on": _iso(self.bought_on),
+            "cost": self.cost,
         }
 
     @classmethod
@@ -96,6 +113,62 @@ class Planting:
             status=data.get("status", ACTIVE),
             notes=data.get("notes", ""),
             estimated_cost=data.get("estimated_cost"),
+            priority=data.get("priority", "normal"),
+            tier=data.get("tier"),
+            not_before=data.get("not_before"),
+            bought_on=_date(data.get("bought_on")),
+            cost=data.get("cost"),
+        )
+
+
+@dataclass
+class Project:
+    """Build-plan work that is not a plant: a path, a fence, raised beds."""
+
+    id: str
+    area_id: str
+    name: str
+    tier: str = "hardscape"
+    estimated_cost: float | None = None
+    priority: str = "normal"
+    not_before: int | None = None
+    status: str = PLANNED
+    notes: str = ""
+    added_on: date | None = None
+    done_on: date | None = None
+    cost: float | None = None  # what it actually cost
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "area_id": self.area_id,
+            "name": self.name,
+            "tier": self.tier,
+            "estimated_cost": self.estimated_cost,
+            "priority": self.priority,
+            "not_before": self.not_before,
+            "status": self.status,
+            "notes": self.notes,
+            "added_on": _iso(self.added_on),
+            "done_on": _iso(self.done_on),
+            "cost": self.cost,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Project:
+        return cls(
+            id=data["id"],
+            area_id=data["area_id"],
+            name=data["name"],
+            tier=data.get("tier", "hardscape"),
+            estimated_cost=data.get("estimated_cost"),
+            priority=data.get("priority", "normal"),
+            not_before=data.get("not_before"),
+            status=data.get("status", PLANNED),
+            notes=data.get("notes", ""),
+            added_on=_date(data.get("added_on")),
+            done_on=_date(data.get("done_on")),
+            cost=data.get("cost"),
         )
 
 

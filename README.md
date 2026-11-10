@@ -79,6 +79,44 @@ forecast). The forecast is read every hour, and then:
 Alerts name the plantings at risk. Only plantings that are in the ground
 count: an annual needs a planting date (ticking its **Plant …** task sets it).
 
+## Build plan and budget
+
+A garden is rarely bought in one go. Record what you mean to add as
+**planned** plantings (`add_planting` with `status: planned` and an
+`estimated_cost`) and **projects** for work that is not a plant, such as a
+path, a fence or raised beds (`add_project`). Open **Configure** on the
+integration to set a **yearly garden budget**.
+
+Master Gardener places each item in a year:
+
+- **Structure first, area by area:** trees and shrubs, then hardscape, then
+  perennials, then small plants. Nothing goes in before something of an
+  earlier tier in the same area, so the hostas wait for the path they edge.
+  The tier is judged from the plant; set `tier` to override it.
+- **Priority** (`high`, `normal`, `low`) orders the whole property. A
+  high-priority item pulls whatever it waits on forward with it.
+- **Budget:** each year takes items in that order while they fit, and spare
+  money goes to smaller items further down. Something dearer than a whole
+  year's budget gets a year to itself. `not_before` holds an item back to a
+  given year.
+
+**Get build plan** (`master_gardener.get_plan`) returns every year with its
+items, what each waits for, and what is spent and left. On the Garden device,
+**Budget left this year** and **Planned this year** show the same for the
+current year.
+
+This year's items appear on their area's to-do list: **Buy …** for plants, in
+the six weeks before their planting window opens, and the project's own name
+for projects, through the growing season. Ticking a purchase records it as
+bought today at its estimated cost: the planting becomes active and gets its
+planting tasks. Unticking puts it back in the plan, and deleting it takes it
+off the plan. To record what it really cost, use `set_planting_status` or
+`set_project_status` with `cost`.
+
+Spending counts plantings bought from the plan or accepted from a proposal,
+and projects marked done. A planting that dies stays counted: the money was
+spent. With no budget set, the whole plan falls in this year.
+
 ## Actions
 
 Every action returns a response, and anywhere an action takes a garden area
@@ -86,13 +124,17 @@ you can give the area's name.
 
 | Action | What it does |
 | --- | --- |
-| `master_gardener.get_garden` | Climate, frost dates and every area with its style, light, size, character, neighbours, counts, soil state and weather alerts |
+| `master_gardener.get_garden` | Climate, frost dates, this year's budget, and every area with its style, light, size, character, neighbours, counts, soil state and weather alerts |
 | `master_gardener.list_tasks` | Tasks due now, or coming up, with their ids |
 | `master_gardener.complete_task` | Record a task as done |
 | `master_gardener.add_task` | A one-off task or a reported problem in an area |
 | `master_gardener.search_plants` | Search the catalogue by name, sun, water, type and height |
 | `master_gardener.add_planting` | Record a plant as growing, planned or proposed |
-| `master_gardener.set_planting_status` | Accept or reject a proposal; record a death or removal |
+| `master_gardener.set_planting_status` | Accept a proposal into the plan or plant it; record a purchase, death or removal |
+| `master_gardener.add_project` | Add a path, fence, bed or other non-plant work to the build plan |
+| `master_gardener.set_project_status` | Record a project as done (with its cost), or drop it |
+| `master_gardener.update_plan_item` | Change an item's priority, tier, earliest year or estimated cost |
+| `master_gardener.get_plan` | The build plan, year by year, against the budget |
 | `master_gardener.list_plantings` | What grows where, optionally by area or status |
 | `master_gardener.refresh_catalogue` | Download the latest plant catalogue now |
 
@@ -107,7 +149,8 @@ how to read the garden, answer "what should I buy for this spot", run a weekly
 check-in, and record what you tell it.
 
 The agent's suggestions are saved as **proposed** plantings, with a reason and
-an estimated cost, and get no tasks until you accept them. Rejected and dead
+an estimated cost, and get no tasks until you accept them, into the build
+plan or straight into the ground. Rejected and dead
 plantings are kept, so later advice can learn from them.
 
 Home Assistant cannot wake the agent: for unprompted reminders, run the agent

@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -27,6 +31,8 @@ async def async_setup_entry(
             TasksDueSensor(manager, None),
             TasksOverdueSensor(manager, None),
             PlantCatalogueSensor(manager),
+            BudgetRemainingSensor(manager),
+            PlannedThisYearSensor(manager),
         ]
     )
     for area in manager.area_subentries:
@@ -139,4 +145,57 @@ class PlantCatalogueSensor(GardenEntity, SensorEntity):
             key: meta[key]
             for key in ("fetched_at", "checked_at", "source")
             if key in meta
+        }
+
+
+class BudgetRemainingSensor(GardenEntity, SensorEntity):
+    """This year's budget less what was bought and what is still planned."""
+
+    _attr_translation_key = "budget_remaining"
+    _attr_device_class = SensorDeviceClass.MONETARY
+
+    def __init__(self, manager) -> None:
+        super().__init__(manager, None, "budget_remaining")
+        self._attr_native_unit_of_measurement = manager.hass.config.currency
+
+    @property
+    def native_value(self) -> float | None:
+        return self.manager.plan()[0].remaining
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        year = self.manager.plan()[0]
+        return {
+            "year": year.year,
+            "budget": year.budget,
+            "spent": year.spent,
+            "planned": year.planned,
+        }
+
+
+class PlannedThisYearSensor(GardenEntity, SensorEntity):
+    """How many plan items fall in this year; the attribute lists them."""
+
+    _attr_translation_key = "planned_this_year"
+
+    def __init__(self, manager) -> None:
+        super().__init__(manager, None, "planned_this_year")
+
+    @property
+    def native_value(self) -> int:
+        return len(self.manager.plan()[0].placements)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        names = {a.subentry_id: a.title for a in self.manager.area_subentries}
+        return {
+            "items": [
+                {
+                    "id": p.item.id,
+                    "name": p.item.name,
+                    "area": names.get(p.item.area_id),
+                    "estimated_cost": p.item.cost,
+                }
+                for p in self.manager.plan()[0].placements[:MAX_LISTED]
+            ]
         }

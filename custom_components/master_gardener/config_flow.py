@@ -35,6 +35,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_ADJACENT,
+    CONF_ANNUAL_BUDGET,
     CONF_CHARACTER,
     CONF_CONDUCTIVITY_SENSORS,
     CONF_DRY_BELOW,
@@ -189,14 +190,34 @@ class SiteOptionsFlow(OptionsFlow):
                 # Left empty, the weather entity is dropped again.
                 if weather := user_input.get(CONF_WEATHER_ENTITY):
                     data[CONF_WEATHER_ENTITY] = weather
+                # Empty or 0: no budget, the whole plan is this year.
+                if budget := user_input.get(CONF_ANNUAL_BUDGET):
+                    data[CONF_ANNUAL_BUDGET] = budget
                 return self.async_create_entry(data=data)
         current = {**self.config_entry.data, **self.config_entry.options}
         schema = _site_schema(current[CONF_LAST_FROST], current[CONF_FIRST_FROST])
-        schema = schema.extend({vol.Optional(CONF_WEATHER_ENTITY): WEATHER_SELECTOR})
+        schema = schema.extend(
+            {
+                vol.Optional(CONF_WEATHER_ENTITY): WEATHER_SELECTOR,
+                vol.Optional(CONF_ANNUAL_BUDGET): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0,
+                        max=10_000_000,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement=self.hass.config.currency,
+                    )
+                ),
+            }
+        )
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                schema, {CONF_WEATHER_ENTITY: current.get(CONF_WEATHER_ENTITY)}
+                schema,
+                {
+                    key: current.get(key)
+                    for key in (CONF_WEATHER_ENTITY, CONF_ANNUAL_BUDGET)
+                },
             ),
             errors=errors,
         )
