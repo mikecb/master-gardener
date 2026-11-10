@@ -182,9 +182,13 @@ If they did something with no matching task, that is fine; note it with
 
 ### "This is overdue / wrong" (e.g. "the grass is too long")
 
-`add_task` in that area with their words as the title, due today. If the
-same complaint keeps coming up, the schedule is too slack for this garden:
-say so plainly.
+`add_task` in that area with their words as the title, due today. A report
+that names a repeating job (grass, lawn, mowing; deadheading, spent
+flowers) also counts against its schedule: after two within 60 days the
+interval tightens by itself, and the task says so. Keep the user's words,
+so the match works. If the schedule has drifted somewhere unhelpful (see
+`schedule_adjustments` in `get_garden`), offer `reset_schedule` for that
+area.
 
 ### "This died"
 

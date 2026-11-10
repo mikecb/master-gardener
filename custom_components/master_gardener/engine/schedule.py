@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from .adapt import Adjustment, describe, interval
 from .catalog import Catalog
 from .models import ACTIVE, Area, CustomTask, Planting, Site, Task
 from .planting_rules import rules_for
@@ -35,8 +36,13 @@ def build_tasks(
     start: date,
     end: date,
     today: date,
+    adjustments: dict[str, Adjustment] | None = None,
 ) -> list[Task]:
-    """Return every task whose window overlaps [start, end], sorted by date."""
+    """Return every task whose window overlaps [start, end], sorted by date.
+
+    adjustments: repeating series whose interval was adapted (engine/adapt).
+    """
+    adjustments = adjustments or {}
     years = range(start.year - 1, end.year + 1)
     by_id = {area.id: area for area in areas}
     tasks: list[Task] = []
@@ -54,6 +60,7 @@ def build_tasks(
             completions=completions,
             last_done=last_done,
             today=today,
+            adjustments=adjustments,
         )
 
     for planting in plantings:
@@ -80,6 +87,7 @@ def build_tasks(
             completions=completions,
             last_done=last_done,
             today=today,
+            adjustments=adjustments,
         )
 
     for custom in custom_tasks:
@@ -118,6 +126,7 @@ def _expand(
     completions: dict[str, date],
     last_done: dict[str, date],
     today: date,
+    adjustments: dict[str, Adjustment],
 ) -> list[Task]:
     tasks: list[Task] = []
     planted_on = planting.planted_on if planting else None
@@ -140,8 +149,17 @@ def _expand(
                 continue  # a one-time planting that is already in the ground
 
             if "every_days" in rule:
+                series = f"{source}:{key}"
                 tasks += _repeats(
-                    rule, f"{source}:{key}", common, since, site, year, last_done, today
+                    rule,
+                    series,
+                    common,
+                    since,
+                    site,
+                    year,
+                    last_done,
+                    today,
+                    adjustments.get(series),
                 )
                 continue
 
@@ -195,9 +213,12 @@ def _repeats(
     year: int,
     last_done: dict[str, date],
     today: date,
+    adjustment: Adjustment | None = None,
 ) -> list[Task]:
     """One real task (the next one due) plus projected repeats to season end."""
-    every = timedelta(days=rule["every_days"])
+    every = timedelta(days=interval(rule["every_days"], adjustment))
+    if note := describe(rule["every_days"], adjustment):
+        common = {**common, "detail": f"{common['detail']} {note}".strip()}
     season_start = site.anchor(rule["anchor"], year) + timedelta(
         weeks=rule["offset_weeks"]
     )
