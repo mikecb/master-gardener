@@ -52,6 +52,15 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(len(candidates), 2)
         self.assertEqual(plantdb.resolve(self.db, "unobtainium"), (None, []))
 
+    def test_name_forms(self):
+        self.assertEqual(
+            plantdb.name_forms(" Peonies "), ["peonies", "peony", "peoni", "peonie"]
+        )
+        self.assertEqual(
+            plantdb.name_forms("tomatoes")[:3], ["tomatoes", "tomato", "tomatoe"]
+        )
+        self.assertEqual(plantdb.name_forms("hosta"), ["hosta"])
+
     def test_search_matches_every_word_and_ranks_exact_first(self):
         names = [p["common_name"] for p in plantdb.search(self.db, "tomato")]
         self.assertEqual(names, ["Tomato", "Cherokee Purple Tomato"])

@@ -3,6 +3,8 @@
 DOMAIN = "master_gardener"
 
 SUBENTRY_AREA = "area"
+# Never stored: the flow records plantings and ends.
+SUBENTRY_PLANTING = "planting"
 
 CONF_ZIP_CODE = "zip_code"
 CONF_ZONE = "zone"

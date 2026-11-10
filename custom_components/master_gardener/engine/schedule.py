@@ -121,6 +121,7 @@ def _expand(
 ) -> list[Task]:
     tasks: list[Task] = []
     planted_on = planting.planted_on if planting else None
+    established = bool(planting and planting.established)
     kinds = {rule["key"]: rule["kind"] for rule in rules}
 
     for year in years:
@@ -135,7 +136,7 @@ def _expand(
                 "planting_id": planting.id if planting else None,
             }
 
-            if rule.get("until_planted") and planted_on:
+            if rule.get("until_planted") and (planted_on or established):
                 continue  # a one-time planting that is already in the ground
 
             if "every_days" in rule:

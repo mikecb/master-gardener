@@ -159,6 +159,12 @@ class PerennialTest(unittest.TestCase):
         planted = build([planting("a", "apple", planted_on=date(2026, 3, 20))])
         self.assertEqual(by_kind(planted, "plant"), [])
 
+        # Planted years ago on a date nobody knows: still no planting task,
+        # but its upkeep goes on.
+        old = build([planting("a", "apple", established=True)])
+        self.assertEqual(by_kind(old, "plant"), [])
+        self.assertTrue(by_kind(old, "prune"))
+
     def test_upkeep_comes_from_the_care_profile(self):
         tasks = build([planting("a", "apple", planted_on=date(2025, 3, 20))])
         self.assertEqual(
