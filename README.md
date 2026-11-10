@@ -42,6 +42,21 @@ your Home Assistant config directory and restart. Requires Home Assistant
 
 The **Garden** device has a calendar and task counts for the whole property.
 
+## Soil sensors
+
+Edit a garden area and pick its **soil moisture** and **soil fertility
+(conductivity)** sensors. Any sensor entity with the moisture (%) or
+conductivity device class works. The area then gets:
+
+- **Needs water** and **Needs fertilizer** binary sensors, with the reading,
+  the threshold and the reason as attributes. Use them in automations, for
+  example to notify you or open an irrigation valve.
+- a **Water …** or **Fertilize …** item on the area's to-do list while the soil
+  needs it. Ticking it hides it for 12 hours (water) or 14 days (fertilizer).
+
+Thresholds default to the garden style and can be set per area. Fertilizer is
+only advised in the growing season and never while the soil is dry.
+
 ## Other actions
 
 - `master_gardener.set_planting_status`: mark a planting `dead` or `removed`.
@@ -65,7 +80,7 @@ integration into a real Home Assistant core:
 
 ```bash
 pip install -r requirements-test.txt
-python -m unittest tests/test_engine.py   # engine only, needs nothing installed
+python -m unittest discover -s tests -p "test_*.py"   # engine only, needs nothing installed
 pytest --cov                              # everything
 ruff check . && ruff format --check .
 ```

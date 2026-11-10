@@ -42,7 +42,7 @@ jobs:
           cache-dependency-path: requirements-test.txt
       - run: pip install -r requirements-test.txt
       - name: Engine tests without Home Assistant imports
-        run: python -m unittest tests/test_engine.py
+        run: python -m unittest discover -s tests -p "test_*.py"
       - name: All tests with coverage
         run: pytest --cov --cov-report=term-missing --cov-fail-under=90
 

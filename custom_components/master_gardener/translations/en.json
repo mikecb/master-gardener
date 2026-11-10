@@ -57,11 +57,19 @@
             "light": "Light",
             "size_sqft": "Size",
             "adjacent": "Next to",
-            "character": "Character"
+            "character": "Character",
+            "moisture_sensors": "Soil moisture sensors",
+            "dry_below": "Water when moisture is below",
+            "conductivity_sensors": "Soil fertility (conductivity) sensors",
+            "feed_below": "Fertilize when conductivity is below"
           },
           "data_description": {
             "adjacent": "Areas you can walk or see into from here.",
-            "character": "The feeling you want here, and anything notable about the site."
+            "character": "The feeling you want here, and anything notable about the site.",
+            "moisture_sensors": "With several sensors, the driest one decides.",
+            "dry_below": "Leave empty to use the usual level for this style of garden.",
+            "conductivity_sensors": "With several sensors, the lowest one decides.",
+            "feed_below": "Leave empty to use the usual level for this style of garden. 0 means never fertilize."
           }
         },
         "reconfigure": {
@@ -72,11 +80,19 @@
             "light": "Light",
             "size_sqft": "Size",
             "adjacent": "Next to",
-            "character": "Character"
+            "character": "Character",
+            "moisture_sensors": "Soil moisture sensors",
+            "dry_below": "Water when moisture is below",
+            "conductivity_sensors": "Soil fertility (conductivity) sensors",
+            "feed_below": "Fertilize when conductivity is below"
           },
           "data_description": {
             "adjacent": "Areas you can walk or see into from here.",
-            "character": "The feeling you want here, and anything notable about the site."
+            "character": "The feeling you want here, and anything notable about the site.",
+            "moisture_sensors": "With several sensors, the driest one decides.",
+            "dry_below": "Leave empty to use the usual level for this style of garden.",
+            "conductivity_sensors": "With several sensors, the lowest one decides.",
+            "feed_below": "Leave empty to use the usual level for this style of garden. 0 means never fertilize."
           }
         }
       },
@@ -111,6 +127,14 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "needs_water": {
+        "name": "Needs water"
+      },
+      "needs_fertilizer": {
+        "name": "Needs fertilizer"
+      }
+    },
     "sensor": {
       "tasks_due": {
         "name": "Tasks due",

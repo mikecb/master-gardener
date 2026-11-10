@@ -20,6 +20,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     DateSelector,
+    EntitySelector,
+    EntitySelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -34,9 +36,13 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_ADJACENT,
     CONF_CHARACTER,
+    CONF_CONDUCTIVITY_SENSORS,
+    CONF_DRY_BELOW,
+    CONF_FEED_BELOW,
     CONF_FIRST_FROST,
     CONF_LAST_FROST,
     CONF_LIGHT,
+    CONF_MOISTURE_SENSORS,
     CONF_NAME,
     CONF_SIZE_SQFT,
     CONF_STYLE,
@@ -188,6 +194,24 @@ class SiteOptionsFlow(OptionsFlow):
         )
 
 
+def _soil_sensors(device_class: str) -> EntitySelector:
+    return EntitySelector(
+        EntitySelectorConfig(domain="sensor", device_class=device_class, multiple=True)
+    )
+
+
+def _threshold(low: float, high: float, step: float, unit: str) -> NumberSelector:
+    return NumberSelector(
+        NumberSelectorConfig(
+            min=low,
+            max=high,
+            step=step,
+            mode=NumberSelectorMode.BOX,
+            unit_of_measurement=unit,
+        )
+    )
+
+
 class AreaSubentryFlow(ConfigSubentryFlow):
     """Add or edit one garden area."""
 
@@ -232,6 +256,10 @@ class AreaSubentryFlow(ConfigSubentryFlow):
         fields[vol.Optional(CONF_CHARACTER)] = TextSelector(
             TextSelectorConfig(multiline=True)
         )
+        fields[vol.Optional(CONF_MOISTURE_SENSORS)] = _soil_sensors("moisture")
+        fields[vol.Optional(CONF_DRY_BELOW)] = _threshold(1, 100, 1, "%")
+        fields[vol.Optional(CONF_CONDUCTIVITY_SENSORS)] = _soil_sensors("conductivity")
+        fields[vol.Optional(CONF_FEED_BELOW)] = _threshold(0, 5000, 10, "µS/cm")
         return vol.Schema(fields)
 
     async def async_step_user(
