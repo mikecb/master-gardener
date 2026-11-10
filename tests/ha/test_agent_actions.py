@@ -84,6 +84,7 @@ async def test_get_garden(hass, garden, freezer):
         "hardiness_zone": "7b",
         "last_spring_frost": "04-15",
         "first_autumn_frost": "10-25",
+        "frost_dates_from": {"source": "entered", "nearest_station": None},
     }
     assert result["plant_catalogue"]["ready"] is True
     assert result["care_profiles"]["rose"] == "Rose"

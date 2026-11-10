@@ -18,9 +18,14 @@ your Home Assistant config directory and restart. Requires Home Assistant
 
 1. **Settings > Devices & services > Add integration > Master Gardener.** Enter
    your US ZIP code. It is sent to phzmapi.org to look up your USDA hardiness
-   zone, and the next screen shows the frost dates typical for that zone.
-   Correct them if you know your local averages (also possible later under
-   **Configure**).
+   zone and its location, and that location to NOAA to find the nearest
+   weather station with frost records. The next screen names the station
+   and shows its average last spring and first autumn frost (1991-2020
+   climate normals: the dates by which a 32 °F freeze has ended, or begun, in
+   half of all years). Where no station has them, as in frost-free places, it
+   shows the frost dates typical for your zone instead. Correct them if you
+   know better (also possible later under **Configure**, which also offers
+   the station's dates to a garden set up before this lookup existed).
 2. On the integration page choose **Add garden area** for each area (vegetable
    garden, orchard, cottage garden...). Each becomes a device with:
    - a **calendar** of every task window,

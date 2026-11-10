@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections import Counter
 from datetime import date
@@ -20,6 +21,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     DateSelector,
     EntitySelector,
     EntitySelectorConfig,
@@ -42,12 +44,16 @@ from .const import (
     CONF_DRY_BELOW,
     CONF_FEED_BELOW,
     CONF_FIRST_FROST,
+    CONF_FROST_STATION,
     CONF_LAST_FROST,
+    CONF_LATITUDE,
     CONF_LIGHT,
+    CONF_LONGITUDE,
     CONF_MOISTURE_SENSORS,
     CONF_NAME,
     CONF_SIZE_SQFT,
     CONF_STYLE,
+    CONF_USE_STATION,
     CONF_WEATHER_ENTITY,
     CONF_ZIP_CODE,
     CONF_ZONE,
@@ -58,9 +64,12 @@ from .const import (
     SUBENTRY_MANAGE,
     SUBENTRY_PLANTING,
 )
+from .engine import frost_normals
 from .engine.climate import frost_dates_for_zone
 from .engine.plantdb import name_forms
 from .manage_flow import ManagePlantingsFlow
+
+_LOGGER = logging.getLogger(__name__)
 
 # Public USDA Plant Hardiness Zone Map data, keyed by ZIP code.
 ZONE_URL = "https://phzmapi.org/{zip_code}.json"
@@ -88,8 +97,8 @@ SEARCH_POOL = 50
 QUANTITY = re.compile(r"^(\d+)\s*[x\u00d7]?\s+(.+)$", re.IGNORECASE)
 
 
-async def _lookup_zone(hass: HomeAssistant, zip_code: str) -> str:
-    """Return the hardiness zone ("7a") for a US ZIP code.
+async def _lookup_zone(hass: HomeAssistant, zip_code: str) -> dict:
+    """The hardiness zone ("7a") of a US ZIP code, and where it is.
 
     Raises LookupError for a ZIP code the map does not cover.
     """
@@ -100,7 +109,57 @@ async def _lookup_zone(hass: HomeAssistant, zip_code: str) -> str:
         if response.status == 404:
             raise LookupError(zip_code)
         response.raise_for_status()
-        return (await response.json(content_type=None))["zone"]
+        found = await response.json(content_type=None)
+    place: dict[str, Any] = {CONF_ZONE: found["zone"]}
+    try:
+        place[CONF_LATITUDE] = float(found["coordinates"]["lat"])
+        place[CONF_LONGITUDE] = float(found["coordinates"]["lon"])
+    except (KeyError, TypeError, ValueError):
+        pass  # the zone is enough; frost dates then come from it
+    return place
+
+
+async def _lookup_frost_normals(
+    hass: HomeAssistant, latitude: float, longitude: float
+) -> frost_normals.FrostNormals | None:
+    """The nearest weather station's frost dates, or None if none can be had."""
+    session = async_get_clientsession(hass)
+    timeout = aiohttp.ClientTimeout(total=10)
+    try:
+        for radius in frost_normals.SEARCH_RADII:
+            url = frost_normals.search_url(latitude, longitude, radius)
+            async with session.get(url, timeout=timeout) as response:
+                response.raise_for_status()
+                found = frost_normals.stations(await response.json(content_type=None))
+            ranked = frost_normals.nearest(found, latitude, longitude)
+            if not ranked:
+                continue
+            url = frost_normals.data_url([s.id for s, _ in ranked])
+            async with session.get(url, timeout=timeout) as response:
+                response.raise_for_status()
+                rows = await response.json(content_type=None)
+            if normals := frost_normals.pick(
+                rows if isinstance(rows, list) else [], ranked
+            ):
+                return normals
+    except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+        _LOGGER.debug("No station frost normals: %s", err)
+    return None
+
+
+def _station_text(normals: frost_normals.FrostNormals) -> str:
+    """One sentence naming the station, for the forms."""
+    height = f", {normals.elevation_m} m up" if normals.elevation_m is not None else ""
+    last, first = (
+        f"{day:%B} {day.day}"
+        for day in (date(2001, *normals.last_frost), date(2001, *normals.first_frost))
+    )
+    return (
+        f"The nearest weather station with frost records, {normals.name} "
+        f"({normals.distance_km:.0f} km away{height}), has an average last spring "
+        f"frost of {last} and first autumn frost of {first} "
+        f"({frost_normals.SOURCE})."
+    )
 
 
 def _site_schema(last_frost: str, first_frost: str) -> vol.Schema:
@@ -137,6 +196,8 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._zip_code = ""
         self._zone = ""
+        self._place: dict[str, Any] = {}
+        self._normals: frost_normals.FrostNormals | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -149,7 +210,8 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_ZIP_CODE] = "invalid_zip"
             else:
                 try:
-                    self._zone = await _lookup_zone(self.hass, zip_code)
+                    self._place = await _lookup_zone(self.hass, zip_code)
+                    self._zone = self._place[CONF_ZONE]
                     frost_dates_for_zone(self._zone)
                 except LookupError:
                     errors[CONF_ZIP_CODE] = "unknown_zip"
@@ -157,6 +219,12 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cannot_connect"
                 else:
                     self._zip_code = zip_code
+                    if CONF_LATITUDE in self._place:
+                        self._normals = await _lookup_frost_normals(
+                            self.hass,
+                            self._place[CONF_LATITUDE],
+                            self._place[CONF_LONGITUDE],
+                        )
                     return await self.async_step_frost()
         return self.async_show_form(
             step_id="user",
@@ -169,24 +237,41 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_frost(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Show the frost dates estimated from the zone; the user may correct them."""
+        """Show the station's frost dates, else the zone's; the user may correct."""
         errors: dict[str, str] = {}
         if user_input is not None:
             data = _site_data(user_input)
             errors = _site_errors(data)
             if not errors:
+                station = (
+                    {CONF_FROST_STATION: self._normals.as_data()}
+                    if self._normals
+                    else {}
+                )
                 return self.async_create_entry(
                     title="Master Gardener",
                     data={
                         CONF_ZIP_CODE: self._zip_code,
-                        CONF_ZONE: self._zone,
+                        **self._place,
                         **data,
+                        **station,
                     },
                 )
+        intro = f"ZIP code {self._zip_code} is in hardiness zone {self._zone}."
+        if self._normals:
+            normals = self._normals.as_data()
+            defaults = (normals[CONF_LAST_FROST], normals[CONF_FIRST_FROST])
+            source = f"{intro} {_station_text(self._normals)}"
+        else:
+            defaults = frost_dates_for_zone(self._zone)
+            source = (
+                f"{intro} No nearby weather station frost records could be found, "
+                "so these are typical frost dates for that zone."
+            )
         return self.async_show_form(
             step_id="frost",
-            data_schema=_site_schema(*frost_dates_for_zone(self._zone)),
-            description_placeholders={"zone": self._zone, "zip_code": self._zip_code},
+            data_schema=_site_schema(*defaults),
+            description_placeholders={"source": source},
             errors=errors,
         )
 
@@ -208,12 +293,44 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class SiteOptionsFlow(OptionsFlow):
+    def __init__(self) -> None:
+        self._normals: frost_normals.FrostNormals | None = None
+        self._looked_up = False
+
+    async def _station(self) -> frost_normals.FrostNormals | None:
+        """The nearest station's frost dates, looked up once per form."""
+        if self._looked_up:
+            return self._normals
+        self._looked_up = True
+        conf = {**self.config_entry.data, **self.config_entry.options}
+        place = {k: conf[k] for k in (CONF_LATITUDE, CONF_LONGITUDE) if k in conf}
+        if len(place) < 2 and conf.get(CONF_ZIP_CODE):
+            # Set up before locations were kept: find the ZIP code again.
+            try:
+                place = await _lookup_zone(self.hass, conf[CONF_ZIP_CODE])
+            except (LookupError, aiohttp.ClientError, TimeoutError, ValueError):
+                place = {}
+        if CONF_LATITUDE in place:
+            self._normals = await _lookup_frost_normals(
+                self.hass, place[CONF_LATITUDE], place[CONF_LONGITUDE]
+            )
+        return self._normals
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         errors: dict[str, str] = {}
+        normals = await self._station()
+        current = {**self.config_entry.data, **self.config_entry.options}
         if user_input is not None:
-            data = _site_data(user_input)
+            if normals and user_input.get(CONF_USE_STATION):
+                station = normals.as_data()
+                data = {
+                    CONF_LAST_FROST: station[CONF_LAST_FROST],
+                    CONF_FIRST_FROST: station[CONF_FIRST_FROST],
+                }
+            else:
+                data = _site_data(user_input)
             errors = _site_errors(data)
             if not errors:
                 # Left empty, the weather entity is dropped again.
@@ -222,9 +339,16 @@ class SiteOptionsFlow(OptionsFlow):
                 # Empty or 0: no budget, the whole plan is this year.
                 if budget := user_input.get(CONF_ANNUAL_BUDGET):
                     data[CONF_ANNUAL_BUDGET] = budget
+                if normals:
+                    data[CONF_FROST_STATION] = normals.as_data()
+                elif CONF_FROST_STATION in current:
+                    data[CONF_FROST_STATION] = current[CONF_FROST_STATION]
                 return self.async_create_entry(data=data)
-        current = {**self.config_entry.data, **self.config_entry.options}
         schema = _site_schema(current[CONF_LAST_FROST], current[CONF_FIRST_FROST])
+        if normals:
+            schema = schema.extend(
+                {vol.Optional(CONF_USE_STATION, default=False): BooleanSelector()}
+            )
         schema = schema.extend(
             {
                 vol.Optional(CONF_WEATHER_ENTITY): WEATHER_SELECTOR,
@@ -248,6 +372,9 @@ class SiteOptionsFlow(OptionsFlow):
                     for key in (CONF_WEATHER_ENTITY, CONF_ANNUAL_BUDGET)
                 },
             ),
+            description_placeholders={
+                "station": _station_text(normals) if normals else ""
+            },
             errors=errors,
         )
 
