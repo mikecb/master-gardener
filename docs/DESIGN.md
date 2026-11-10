@@ -8,7 +8,7 @@ do when, what to buy next, and it adjusts to sensors and to your feedback.
 
 | Question | Decision |
 | --- | --- |
-| Where the judgment comes from | Hybrid. A deterministic engine owns dates, thresholds, budget and phasing. An LLM (Claude API, user's key) is used only for design advice. Calendar and alerts never depend on the API. |
+| Where the judgment comes from | Split. A deterministic engine in the integration owns facts, dates, thresholds and (later) budget phasing. Design judgment comes from an external AI agent that reads and writes the garden through the integration's actions, guided by `skills/master-gardener/SKILL.md`. The integration never calls an AI service itself, so it needs no API key and the calendar never depends on one. |
 | Interface | Native Home Assistant first: devices, calendar, to-do, sensors, actions, notifications, Assist. A custom sidebar panel is a later phase. |
 | First slice | Areas + calendar (this document's phase 1). |
 
@@ -83,12 +83,14 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
    to-do items. Still to do: hold off watering when rain is forecast, frost and
    heat warnings for tender plantings, and measured light hours replacing the
    hand-entered light level.
-3. **Site knowledge + advisor.** Pull public data for the property: hardiness
-   zone, frost normals (replacing the hand-entered dates), soil survey, sun
-   path. A `recommend` action sends one area's full context (style, character,
-   light, soil, neighbours, existing and dead plantings, seeds on hand, budget)
-   to Claude and returns a plant palette with placement notes and a shopping
-   list. Answers "what do I buy for the cottage garden front steps".
+3. **Advisor (built) and site knowledge.** Built: agent-facing actions
+   (`get_garden`, `list_tasks`, `complete_task`, filtered `search_plants`,
+   area names in place of device ids), `proposed` plantings with a reason and
+   an estimated cost, and the gardener skill. An agent answers "what do I buy
+   for the cottage garden front steps" by reading the area and its neighbours,
+   searching the catalogue and saving proposals. Still to do: pull public data
+   for the property (frost normals replacing the zone estimate, soil survey,
+   sun path) and expose seeds on hand.
 4. **Multi-year build plan and budget.** Wishlist items with cost and a
    structural tier (trees and shrubs, then hardscape, then perennials and
    small plants). The engine orders purchases across years under an annual

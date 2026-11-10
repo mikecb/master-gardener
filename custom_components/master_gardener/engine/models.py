@@ -6,9 +6,11 @@ from dataclasses import dataclass
 from datetime import date
 
 ACTIVE = "active"
+# Suggested (by an advisor) but not agreed: recorded, no tasks until accepted.
+PROPOSED = "proposed"
 DEAD = "dead"
 REMOVED = "removed"
-PLANTING_STATUSES = (ACTIVE, DEAD, REMOVED)
+PLANTING_STATUSES = (ACTIVE, PROPOSED, DEAD, REMOVED)
 
 UPCOMING = "upcoming"
 DUE = "due"
@@ -59,6 +61,7 @@ class Planting:
     added_on: date | None = None
     status: str = ACTIVE
     notes: str = ""
+    estimated_cost: float | None = None  # for the whole quantity
 
     def to_dict(self, *, with_record: bool = True) -> dict:
         """As stored; with_record=False leaves out the bulky plant record."""
@@ -75,6 +78,7 @@ class Planting:
             "added_on": _iso(self.added_on),
             "status": self.status,
             "notes": self.notes,
+            "estimated_cost": self.estimated_cost,
         }
 
     @classmethod
@@ -91,6 +95,7 @@ class Planting:
             added_on=_date(data.get("added_on")),
             status=data.get("status", ACTIVE),
             notes=data.get("notes", ""),
+            estimated_cost=data.get("estimated_cost"),
         )
 
 
