@@ -153,17 +153,47 @@ def resolve(db_path: Path, text: str) -> tuple[dict | None, list[dict]]:
 
 
 def search(
-    db_path: Path, query: str, *, zone: int | None = None, limit: int = 20
+    db_path: Path,
+    query: str = "",
+    *,
+    zone: int | None = None,
+    limit: int = 20,
+    sun: str | None = None,
+    water: str | None = None,
+    category: str | None = None,
+    plant_type: str | None = None,
+    min_height_in: float | None = None,
+    max_height_in: float | None = None,
 ) -> list[dict]:
-    """Plants whose name, botanical name or id contains every word of query."""
+    """Plants matching every word of query and every filter given.
+
+    query is matched against the name, botanical name and id; plant_type
+    against the free-text subcategory ("evergreen shrub", "fern"). Height
+    filters keep plants whose whole mature range fits. With nothing to match
+    on, returns nothing rather than the first plants in the alphabet.
+    """
     words = query.lower().replace("-", " ").split()
-    if not words:
-        return []
-    where = " AND ".join(["search LIKE ? ESCAPE '\\'"] * len(words))
+    clauses = ["search LIKE ? ESCAPE '\\'"] * len(words)
     params: list = [f"%{_escape(word)}%" for word in words]
+    for column, value in (("sun", sun), ("water", water), ("category", category)):
+        if value:
+            clauses.append(f"{column} = ?")
+            params.append(value)
+    for word in (plant_type or "").lower().replace("-", " ").split():
+        clauses.append("replace(lower(subcategory), '-', ' ') LIKE ? ESCAPE '\\'")
+        params.append(f"%{_escape(word)}%")
+    if min_height_in is not None:
+        clauses.append("height_in_min >= ?")
+        params.append(min_height_in)
+    if max_height_in is not None:
+        clauses.append("height_in_max <= ?")
+        params.append(max_height_in)
+    if not clauses:
+        return []
     if zone is not None:
-        where += " AND usda_zone_min <= ? AND usda_zone_max >= ?"
+        clauses.append("usda_zone_min <= ? AND usda_zone_max >= ?")
         params += [zone, zone]
+    where = " AND ".join(clauses)
     phrase = " ".join(words)
     # Exact name first, then names starting with the query, then shortest.
     tail = "ORDER BY name_lc = ? DESC, name_lc LIKE ? ESCAPE '\\' DESC, "

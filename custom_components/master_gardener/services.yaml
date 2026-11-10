@@ -1,10 +1,55 @@
-add_planting:
-  name: Add planting
-  description: Record something growing (or planned) in a garden area. Plants found in the built-in catalog get their yearly tasks scheduled automatically.
+get_garden:
+  name: Get garden
+  description: Return the whole garden at a glance - climate and frost dates, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
+
+list_tasks:
+  name: List tasks
+  description: Return garden tasks with their ids - what is due or overdue now, or what is coming up.
   fields:
     area:
       name: Garden area
-      description: The area it grows in.
+      description: Area name or id. Leave empty for the whole property.
+      selector:
+        device:
+          integration: master_gardener
+    show:
+      name: Show
+      description: due is everything to do now, including overdue. upcoming is what starts within the next days. all is both.
+      default: due
+      selector:
+        select:
+          options:
+            - due
+            - upcoming
+            - all
+    days:
+      name: Days ahead
+      description: How far ahead upcoming looks.
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 400
+          mode: box
+
+complete_task:
+  name: Complete task
+  description: Record that a task was done. Completing a planting task also records the planting date. Completing a watering or fertilizing task hides it for a while, until the soil has had time to respond.
+  fields:
+    task_id:
+      name: Task ID
+      description: From the List tasks action.
+      required: true
+      selector:
+        text:
+
+add_planting:
+  name: Add planting
+  description: Record something growing, planned or proposed in a garden area. Plants found in the plant catalogue get their sowing, planting and harvest tasks scheduled automatically, and upkeep tasks from their care profile.
+  fields:
+    area:
+      name: Garden area
+      description: The area it grows in - its name or id.
       required: true
       selector:
         device:
@@ -35,12 +80,30 @@ add_planting:
       description: When it went in the ground. Leave empty if it is only planned.
       selector:
         date:
+    status:
+      name: Status
+      description: active is growing or definitely planned and gets tasks. proposed is a suggestion awaiting a decision - it is recorded but gets no tasks until Set planting status makes it active.
+      default: active
+      selector:
+        select:
+          options:
+            - active
+            - proposed
+    estimated_cost:
+      name: Estimated cost
+      description: What buying the whole quantity is expected to cost.
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 0.01
+          mode: box
     notes:
       name: Notes
+      description: For a proposal, why this plant suits this spot.
       selector:
         text:
           multiline: true
-
     care_profile:
       name: Care profile
       description: The kind of upkeep it needs (pruning, feeding, mowing). Leave empty to let it be chosen from the plant's type.
@@ -68,14 +131,66 @@ add_planting:
 
 search_plants:
   name: Search plants
-  description: Search the plant catalogue (OpenPlantDB) by common name, botanical name or id. Returns the ids to use with Add planting.
+  description: Search the plant catalogue (OpenPlantDB) by name and by what a spot needs. Give search text, filters or both. Returns the ids to use with Add planting, with each plant's size, light and water needs and hardiness zones.
   fields:
     query:
       name: Search for
-      required: true
+      description: Words in the common name, botanical name or id.
       example: japanese maple
       selector:
         text:
+    sun:
+      name: Sun
+      selector:
+        select:
+          options:
+            - full
+            - partial
+            - shade
+    water:
+      name: Water need
+      selector:
+        select:
+          options:
+            - low
+            - moderate
+            - high
+    category:
+      name: Category
+      description: Trees, shrubs and ornamental perennials are all in flower.
+      selector:
+        select:
+          options:
+            - vegetable
+            - herb
+            - fruit
+            - berry
+            - flower
+            - cover-crop
+    plant_type:
+      name: Type
+      description: Words in the plant's type, e.g. evergreen shrub, fern, native perennial, conifer, ornamental grass, groundcover.
+      example: evergreen shrub
+      selector:
+        text:
+    min_height_in:
+      name: Minimum height
+      description: Keep plants that are at least this tall when mature.
+      selector:
+        number:
+          min: 0
+          max: 2000
+          unit_of_measurement: in
+          mode: box
+    max_height_in:
+      name: Maximum height
+      description: Keep plants that stay under this height when mature.
+      selector:
+        number:
+          min: 0
+          max: 2000
+          unit_of_measurement: in
+          mode: box
     limit:
       name: Maximum results
       default: 10
@@ -97,11 +212,11 @@ refresh_catalogue:
 
 set_planting_status:
   name: Set planting status
-  description: Report that a planting died or was removed (or bring it back). Its tasks stop, and the loss is kept as history.
+  description: Accept a proposed planting (active), turn one down (removed), or report that a planting died or was removed. Tasks stop for anything not active, and losses are kept as history.
   fields:
     planting_id:
       name: Planting ID
-      description: From the area's Plantings sensor or the List plantings action.
+      description: From the List plantings action or the area's Plantings sensor.
       required: true
       selector:
         text:
@@ -112,6 +227,7 @@ set_planting_status:
         select:
           options:
             - active
+            - proposed
             - dead
             - removed
     notes:
@@ -127,6 +243,7 @@ add_task:
   fields:
     area:
       name: Garden area
+      description: Area name or id.
       required: true
       selector:
         device:
@@ -149,10 +266,20 @@ add_task:
 
 list_plantings:
   name: List plantings
-  description: Return every recorded planting, optionally for one area.
+  description: Return recorded plantings with their ids, optionally for one area or one status (e.g. proposed, dead).
   fields:
     area:
       name: Garden area
+      description: Area name or id.
       selector:
         device:
           integration: master_gardener
+    status:
+      name: Status
+      selector:
+        select:
+          options:
+            - active
+            - proposed
+            - dead
+            - removed

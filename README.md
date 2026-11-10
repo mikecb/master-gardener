@@ -58,13 +58,39 @@ conductivity device class works. The area then gets:
 Thresholds default to the garden style and can be set per area. Fertilizer is
 only advised in the growing season and never while the soil is dry.
 
-## Other actions
+## Actions
 
-- `master_gardener.set_planting_status`: mark a planting `dead` or `removed`.
-- `master_gardener.add_task`: a one-off task in an area.
-- `master_gardener.list_plantings`: everything recorded, with ids.
-- `master_gardener.search_plants`: search the plant catalogue.
-- `master_gardener.refresh_catalogue`: download the latest catalogue now.
+Every action returns a response, and anywhere an action takes a garden area
+you can give the area's name.
+
+| Action | What it does |
+| --- | --- |
+| `master_gardener.get_garden` | Climate, frost dates and every area with its style, light, size, character, neighbours, counts and soil state |
+| `master_gardener.list_tasks` | Tasks due now, or coming up, with their ids |
+| `master_gardener.complete_task` | Record a task as done |
+| `master_gardener.add_task` | A one-off task or a reported problem in an area |
+| `master_gardener.search_plants` | Search the catalogue by name, sun, water, type and height |
+| `master_gardener.add_planting` | Record a plant as growing, planned or proposed |
+| `master_gardener.set_planting_status` | Accept or reject a proposal; record a death or removal |
+| `master_gardener.list_plantings` | What grows where, optionally by area or status |
+| `master_gardener.refresh_catalogue` | Download the latest plant catalogue now |
+
+## Use with an AI gardener
+
+Master Gardener holds the facts and does the date and threshold arithmetic;
+it leaves plant selection and design judgment to an AI agent that can call
+Home Assistant actions (for example Claude with the Home Assistant MCP
+server). Give that agent
+[skills/master-gardener/SKILL.md](skills/master-gardener/SKILL.md): it explains
+how to read the garden, answer "what should I buy for this spot", run a weekly
+check-in, and record what you tell it.
+
+The agent's suggestions are saved as **proposed** plantings, with a reason and
+an estimated cost, and get no tasks until you accept them. Rejected and dead
+plantings are kept, so later advice can learn from them.
+
+Home Assistant cannot wake the agent: for unprompted reminders, run the agent
+on a schedule.
 
 ## Plant catalogue
 

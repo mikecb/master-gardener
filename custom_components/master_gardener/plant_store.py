@@ -141,9 +141,8 @@ class PlantStore:
     async def async_resolve(self, text: str) -> tuple[dict | None, list[dict]]:
         return await self.hass.async_add_executor_job(plantdb.resolve, self._db, text)
 
-    async def async_search(
-        self, query: str, zone: int | None, limit: int
-    ) -> list[dict]:
+    async def async_search(self, query: str, **filters) -> list[dict]:
+        """See plantdb.search for the filters."""
         return await self.hass.async_add_executor_job(
-            lambda: plantdb.search(self._db, query, zone=zone, limit=limit)
+            lambda: plantdb.search(self._db, query, **filters)
         )

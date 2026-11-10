@@ -37,7 +37,16 @@ from .engine.care import (
     water_advice,
 )
 from .engine.catalog import Catalog
-from .engine.models import PLANTING_STATUSES, Area, CustomTask, Planting, Site, Task
+from .engine.models import (
+    ACTIVE,
+    PLANTING_STATUSES,
+    PROPOSED,
+    Area,
+    CustomTask,
+    Planting,
+    Site,
+    Task,
+)
 from .engine.planting_rules import care_profile
 from .engine.schedule import IN_GROUND_KINDS, build_tasks
 from .plant_store import PlantStore
@@ -271,6 +280,8 @@ class GardenManager:
         planted_on: date | None = None,
         notes: str = "",
         profile: str | None = None,
+        status: str = ACTIVE,
+        estimated_cost: float | None = None,
     ) -> Planting:
         """Record a planting, looking the plant up in the catalogue."""
         if not self.plants.ready:
@@ -297,7 +308,9 @@ class GardenManager:
             quantity=quantity,
             planted_on=planted_on,
             added_on=self.today,
+            status=status,
             notes=notes,
+            estimated_cost=estimated_cost,
         )
         self.plantings[planting.id] = planting
         self._changed()
@@ -326,6 +339,8 @@ class GardenManager:
             raise ServiceValidationError(f"No planting with id {planting_id}")
         if status not in PLANTING_STATUSES:
             raise ServiceValidationError(f"Unknown status {status}")
+        if planting.status == PROPOSED and status == ACTIVE:
+            planting.added_on = self.today  # its calendar starts on acceptance
         planting.status = status
         if notes:
             planting.notes = f"{planting.notes}\n{notes}".strip()
