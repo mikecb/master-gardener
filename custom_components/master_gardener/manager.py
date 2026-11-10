@@ -747,6 +747,40 @@ class GardenManager:
         self._changed()
         return planting
 
+    def edit_planting(
+        self,
+        planting_id: str,
+        *,
+        record: dict | None,
+        name: str,
+        quantity: int,
+        planted_on: date | None,
+        established: bool,
+        notes: str,
+        profile: str | None,
+        estimated_cost: float | None,
+    ) -> Planting:
+        """Replace what the user can edit about a planting.
+
+        A profile left empty is chosen from the plant, as when it was added.
+        """
+        planting = self.plantings.get(planting_id)
+        if planting is None:
+            raise ServiceValidationError(f"No planting with id {planting_id}")
+        if profile and profile not in self.catalog.profiles:
+            raise ServiceValidationError(f"Unknown care profile {profile}")
+        planting.plant = record["slug"] if record else None
+        planting.plant_data = record
+        planting.profile = profile or (care_profile(record) if record else None)
+        planting.name = name
+        planting.quantity = quantity
+        planting.planted_on = planted_on
+        planting.established = established and planted_on is None
+        planting.notes = notes
+        planting.estimated_cost = estimated_cost
+        self._changed()
+        return planting
+
     def add_task(
         self, area_id: str, title: str, due: date | None = None, notes: str = ""
     ) -> CustomTask:

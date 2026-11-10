@@ -55,10 +55,12 @@ from .const import (
     LIGHTS,
     STYLES,
     SUBENTRY_AREA,
+    SUBENTRY_MANAGE,
     SUBENTRY_PLANTING,
 )
 from .engine.climate import frost_dates_for_zone
 from .engine.plantdb import name_forms
+from .manage_flow import ManagePlantingsFlow
 
 # Public USDA Plant Hardiness Zone Map data, keyed by ZIP code.
 ZONE_URL = "https://phzmapi.org/{zip_code}.json"
@@ -198,7 +200,11 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_supported_subentry_types(
         cls, config_entry: ConfigEntry
     ) -> dict[str, type[ConfigSubentryFlow]]:
-        return {SUBENTRY_AREA: AreaSubentryFlow, SUBENTRY_PLANTING: PlantingFlow}
+        return {
+            SUBENTRY_AREA: AreaSubentryFlow,
+            SUBENTRY_PLANTING: PlantingFlow,
+            SUBENTRY_MANAGE: ManagePlantingsFlow,
+        }
 
 
 class SiteOptionsFlow(OptionsFlow):

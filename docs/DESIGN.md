@@ -143,6 +143,12 @@ offered as up to eight candidates from a wider search, ranked by a name that
 ends with the typed words, then the genus and species most results share,
 then the shortest name. Annuals are always counted as planted this season.
 
+**Manage plantings** is a second such flow: area (skipped when only one has
+plantings), then planting, then a menu of what can happen to it given its
+status (active: died, removed, edit; planned: bought, dropped, edit;
+proposed: accept into the plan, plant now, decline, edit). Dead and removed
+plantings are not offered: they are history.
+
 ## Roadmap
 
 1. **Areas + calendar (built).** Areas, plantings, frost-anchored task
