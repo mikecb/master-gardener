@@ -41,7 +41,8 @@ def _entry(hass, **area):
 
 async def _setup(hass, entry):
     assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    # The plant catalogue downloads in a background task.
+    await hass.async_block_till_done(wait_background_tasks=True)
 
 
 async def _set(hass, entity_id, value, unit="%"):

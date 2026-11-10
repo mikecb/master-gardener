@@ -17,7 +17,9 @@ do when, what to buy next, and it adjusts to sensors and to your feedback.
 ```
 custom_components/master_gardener/
   engine/        pure Python, no HA imports, unit-tested on its own
-    data/catalog.json   plants and area styles with their task rules
+    data/catalog.json   our care profiles and area styles with their task rules
+    plantdb.py          OpenPlantDB CSV -> local SQLite, lookup and search
+    planting_rules.py   one plant record -> sow/plant/harvest rules + care profile
     schedule.py         areas + plantings + frost dates -> dated tasks
   manager.py     state, persistence (.storage), cache, change notifications
   config_flow.py property frost dates; one config subentry per garden area
@@ -38,7 +40,14 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 - **Area** (config subentry, shown as a device): name, style, light, size,
   adjacent areas, free-text character. Adjacency and character are collected
   now and used by the advisor in phase 3.
-- **Planting**: a plant (catalog key or free text) in an area, with quantity,
+- **Plant catalogue**: OpenPlantDB, downloaded at runtime by
+  `plant_store.py` and kept as SQLite in the config folder, so 38,000
+  records never sit in memory. Refetched when the integration version
+  changes, checked weekly with a conditional request, and replaced only by
+  a download that parses and has the expected columns.
+- **Planting**: a plant (OpenPlantDB id or free text) in an area, with its
+  own copy of the plant's record and a care profile, so the calendar works
+  with no catalogue on disk. Also quantity,
   planted date and status `active | dead | removed`. Dead plantings are kept:
   they are evidence for future recommendations.
 - **Task**: generated, never stored. Only completions are stored, so changing a
@@ -86,17 +95,20 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
    budget and user priorities; deaths and overdue feedback reshuffle it.
    Seed and plant inventory.
 5. **Adaptive maintenance.** Repeated "overdue" feedback tightens an interval;
-   repeated early completion loosens it. Larger, richer plant catalog, possibly
-   from an external plant database.
+   repeated early completion loosens it. Care profiles for shrubs and vines.
 6. **Custom panel.** Property map, per-area planting plans, roadmap and budget
    views.
 
-## Known limits of phase 1
+## Known limits
 
 - Northern hemisphere only (spring frost must precede autumn frost).
-- The catalog is small (about 40 entries, many of them generic types such as
-  "deciduous tree" or "herbaceous perennial"). Unknown plants are tracked but
-  get no automatic tasks.
+- Plant timing is only as good as OpenPlantDB, which is large but compiled
+  largely by automated means and not independently verified.
+- About 55% of catalogue plants match no care profile (most shrubs, vines,
+  tropicals and annuals) and get planting tasks only.
+- For seedlings started indoors the database gives the sowing time only;
+  the plant-out date is derived from frost tolerance.
+- Its `spring` and `fall` planting anchors are read as the frost dates.
 - US only: the site is located by ZIP code. Frost dates are estimated from the
   hardiness zone, which measures winter cold rather than frost timing, so they
   can be a week or two off until corrected by hand. Phase 3 replaces the

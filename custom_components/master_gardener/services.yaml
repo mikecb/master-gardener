@@ -11,7 +11,7 @@ add_planting:
           integration: master_gardener
     plant:
       name: Plant
-      description: Catalog plant, e.g. tomato, garlic, apple, japanese maple, rose, lavender, perennial, lawn. Anything else is tracked without automatic tasks.
+      description: A plant id or exact name from the plant catalogue, e.g. tomato or cherokee-purple. Find ids with the Search plants action. A plant the catalogue does not know is tracked without automatic sowing and harvest tasks.
       required: true
       example: tomato
       selector:
@@ -40,6 +40,60 @@ add_planting:
       selector:
         text:
           multiline: true
+
+    care_profile:
+      name: Care profile
+      description: The kind of upkeep it needs (pruning, feeding, mowing). Leave empty to let it be chosen from the plant's type.
+      selector:
+        select:
+          options:
+            - apple
+            - azalea
+            - blueberry
+            - boxwood
+            - conifer
+            - deciduous_tree
+            - hydrangea
+            - japanese_maple
+            - lavender
+            - lawn
+            - ornamental_grass
+            - peach
+            - perennial
+            - pine
+            - rose
+            - spring_bulb
+            - strawberry
+            - wildflower_meadow
+
+search_plants:
+  name: Search plants
+  description: Search the plant catalogue (OpenPlantDB) by common name, botanical name or id. Returns the ids to use with Add planting.
+  fields:
+    query:
+      name: Search for
+      required: true
+      example: japanese maple
+      selector:
+        text:
+    limit:
+      name: Maximum results
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+    all_zones:
+      name: Include plants not hardy here
+      description: By default only plants suited to your hardiness zone are returned.
+      default: false
+      selector:
+        boolean:
+
+refresh_catalogue:
+  name: Refresh plant catalogue
+  description: Download the latest plant catalogue from OpenPlantDB now. This also happens when the integration is updated, and it is checked for changes weekly.
 
 set_planting_status:
   name: Set planting status

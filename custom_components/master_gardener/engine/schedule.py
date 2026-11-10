@@ -15,6 +15,7 @@ from datetime import date, timedelta
 
 from .catalog import Catalog
 from .models import ACTIVE, Area, CustomTask, Planting, Site, Task
+from .planting_rules import rules_for
 
 # Rules of these kinds are considered done once a planting has a planted_on date.
 PLANTING_KINDS = {"sow_indoors", "transplant", "direct_sow", "plant"}
@@ -56,8 +57,13 @@ def build_tasks(
         )
 
     for planting in plantings:
-        entry = catalog.get(planting.plant)
-        if planting.status != ACTIVE or planting.area_id not in by_id or not entry:
+        if planting.status != ACTIVE or planting.area_id not in by_id:
+            continue
+        rules = [
+            *(rules_for(planting.plant_data) if planting.plant_data else ()),
+            *catalog.profile_rules(planting.profile),
+        ]
+        if not rules:
             continue
         since = max(
             (d for d in (planting.planted_on, planting.added_on) if d), default=None
@@ -66,7 +72,7 @@ def build_tasks(
             source=f"planting:{planting.id}",
             area_id=planting.area_id,
             name=planting.name,
-            rules=entry["rules"],
+            rules=rules,
             planting=planting,
             since=since,
             site=site,
@@ -128,6 +134,9 @@ def _expand(
                 "detail": rule.get("detail", ""),
                 "planting_id": planting.id if planting else None,
             }
+
+            if rule.get("until_planted") and planted_on:
+                continue  # a one-time planting that is already in the ground
 
             if "every_days" in rule:
                 tasks += _repeats(

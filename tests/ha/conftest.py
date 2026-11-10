@@ -1,9 +1,12 @@
 """Fixtures for tests that load the integration into a real Home Assistant core."""
 
 import pytest
+from catalogue_helpers import mock_catalogue
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.master_gardener import plant_store
 from custom_components.master_gardener.const import DOMAIN
+from custom_components.master_gardener.engine import plantdb
 
 
 @pytest.fixture(autouse=True)
@@ -41,3 +44,13 @@ def entry(hass):
     )
     entry.add_to_hass(hass)
     return entry
+
+
+@pytest.fixture(autouse=True)
+def catalogue(aioclient_mock, monkeypatch, tmp_path):
+    """Keep the catalogue in a temp folder and never touch the network."""
+    monkeypatch.setattr(plant_store, "catalogue_dir", lambda hass: tmp_path)
+    # The fixture is far smaller than a real export.
+    monkeypatch.setattr(plantdb, "MIN_PLANTS", 1)
+    mock_catalogue(aioclient_mock)
+    return tmp_path

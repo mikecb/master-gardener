@@ -32,175 +32,83 @@
       {"key": "gravel", "kind": "mulch", "title": "Weed and refresh gravel mulch in {name}", "anchor": "last_frost", "offset_weeks": 0, "window_weeks": 4}
     ]
   },
-  "plants": {
-    "tomato": {"name": "Tomato", "aliases": ["tomatoes"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -8, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": 1, "window_weeks": 3, "detail": "Harden off for a week first."},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 70, "window_weeks": 10}
-    ]},
-    "pepper": {"name": "Pepper", "aliases": ["peppers", "chili", "bell pepper"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -9, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 75, "window_weeks": 10}
-    ]},
-    "eggplant": {"name": "Eggplant", "aliases": ["aubergine"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -9, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 75, "window_weeks": 8}
-    ]},
-    "broccoli": {"name": "Broccoli", "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -7, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 2},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 60, "window_weeks": 3}
-    ]},
-    "cabbage": {"name": "Cabbage", "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -7, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 2},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 70, "window_weeks": 4}
-    ]},
-    "kale": {"name": "Kale", "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 50, "window_weeks": 10}
-    ]},
-    "onion": {"name": "Onion", "aliases": ["onions"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -10, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 100, "window_weeks": 4, "detail": "Lift when the tops fall over."}
-    ]},
-    "lettuce": {"name": "Lettuce", "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 4},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 45, "window_weeks": 5}
-    ]},
-    "spinach": {"name": "Spinach", "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 40, "window_weeks": 4}
-    ]},
-    "pea": {"name": "Peas", "aliases": ["pea", "snap peas", "snow peas"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 60, "window_weeks": 3}
-    ]},
-    "radish": {"name": "Radish", "aliases": ["radishes"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 4},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 28, "window_weeks": 3}
-    ]},
-    "carrot": {"name": "Carrot", "aliases": ["carrots"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 4},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 70, "window_weeks": 6}
-    ]},
-    "beet": {"name": "Beet", "aliases": ["beets", "beetroot"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 4},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 55, "window_weeks": 5}
-    ]},
-    "potato": {"name": "Potato", "aliases": ["potatoes"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "plant", "kind": "plant", "title": "Plant seed {name}", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 90, "window_weeks": 4}
-    ]},
-    "bean": {"name": "Bush beans", "aliases": ["bean", "beans", "green beans", "pole beans"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": 1, "window_weeks": 4},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 55, "window_weeks": 4}
-    ]},
-    "cucumber": {"name": "Cucumber", "aliases": ["cucumbers"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 55, "window_weeks": 6}
-    ]},
-    "zucchini": {"name": "Zucchini", "aliases": ["summer squash", "courgette"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 50, "window_weeks": 8}
-    ]},
-    "winter_squash": {"name": "Winter squash", "aliases": ["pumpkin", "butternut squash"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 2},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 100, "window_weeks": 3, "detail": "Bring in before the first hard frost."}
-    ]},
-    "sweet_corn": {"name": "Sweet corn", "aliases": ["corn"], "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "sow", "kind": "direct_sow", "title": "Sow {name} outdoors", "anchor": "last_frost", "offset_weeks": 1, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "sow", "days": 75, "window_weeks": 3}
-    ]},
-    "garlic": {"name": "Garlic", "category": "vegetable", "lifecycle": "annual", "rules": [
-      {"key": "plant", "kind": "plant", "title": "Plant {name} cloves", "anchor": "first_frost", "offset_weeks": -2, "window_weeks": 4},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 245, "window_weeks": 4, "detail": "Lift when the lower third of the leaves have browned."}
-    ]},
-    "basil": {"name": "Basil", "category": "herb", "lifecycle": "annual", "rules": [
-      {"key": "start", "kind": "sow_indoors", "title": "Start {name} indoors", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 2},
-      {"key": "plant", "kind": "transplant", "title": "Plant {name} outdoors", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 3},
-      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "after": "plant", "days": 30, "window_weeks": 12}
-    ]},
-    "strawberry": {"name": "Strawberries", "aliases": ["strawberry"], "category": "fruit", "lifecycle": "perennial", "rules": [
+  "profiles": {
+    "strawberry": {"name": "Strawberries", "rules": [
       {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "last_frost", "offset_weeks": 5, "window_weeks": 5},
       {"key": "renovate", "kind": "cut", "title": "Renovate {name} bed after fruiting", "anchor": "last_frost", "offset_weeks": 11, "window_weeks": 3},
       {"key": "mulch", "kind": "mulch", "title": "Mulch {name} with straw for winter", "anchor": "first_frost", "offset_weeks": 3, "window_weeks": 3}
     ]},
-    "blueberry": {"name": "Blueberry", "aliases": ["blueberries"], "category": "fruit", "lifecycle": "perennial", "rules": [
+    "blueberry": {"name": "Blueberry", "rules": [
       {"key": "prune", "kind": "prune", "title": "Prune {name}", "anchor": "last_frost", "offset_weeks": -8, "window_weeks": 5},
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name} (acid feed)", "anchor": "last_frost", "offset_weeks": -2, "window_weeks": 3},
       {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "last_frost", "offset_weeks": 9, "window_weeks": 6}
     ]},
-    "apple": {"name": "Apple tree", "aliases": ["apple", "apples", "pear", "pear tree"], "category": "fruit_tree", "lifecycle": "perennial", "rules": [
+    "apple": {"name": "Apple or pear tree", "rules": [
       {"key": "prune", "kind": "prune", "title": "Dormant-prune {name}", "anchor": "last_frost", "offset_weeks": -10, "window_weeks": 6},
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name}", "anchor": "last_frost", "offset_weeks": -3, "window_weeks": 3},
       {"key": "thin", "kind": "thin", "title": "Thin fruit on {name}", "anchor": "last_frost", "offset_weeks": 7, "window_weeks": 3},
       {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "first_frost", "offset_weeks": -8, "window_weeks": 7, "detail": "Timing varies a lot by variety."}
     ]},
-    "peach": {"name": "Peach tree", "aliases": ["peach", "peaches", "plum", "plum tree", "cherry tree", "nectarine"], "category": "fruit_tree", "lifecycle": "perennial", "rules": [
+    "peach": {"name": "Stone fruit tree", "rules": [
       {"key": "prune", "kind": "prune", "title": "Prune {name}", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 4, "detail": "Stone fruit is pruned late, close to bloom, to limit canker."},
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name}", "anchor": "last_frost", "offset_weeks": -2, "window_weeks": 3},
       {"key": "thin", "kind": "thin", "title": "Thin fruit on {name}", "anchor": "last_frost", "offset_weeks": 6, "window_weeks": 3},
       {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "last_frost", "offset_weeks": 12, "window_weeks": 7, "detail": "Timing varies a lot by variety."}
     ]},
-    "deciduous_tree": {"name": "Deciduous tree", "aliases": ["oak", "maple", "dogwood", "redbud", "birch", "beech", "tree"], "category": "tree", "lifecycle": "perennial", "rules": [
+    "deciduous_tree": {"name": "Deciduous tree", "rules": [
       {"key": "prune", "kind": "prune", "title": "Structural-prune {name} while dormant", "anchor": "last_frost", "offset_weeks": -10, "window_weeks": 6},
       {"key": "mulch", "kind": "mulch", "title": "Refresh mulch ring around {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 4, "detail": "Keep mulch off the trunk flare."}
     ]},
-    "japanese_maple": {"name": "Japanese maple", "aliases": ["acer palmatum"], "category": "tree", "lifecycle": "perennial", "rules": [
+    "japanese_maple": {"name": "Japanese maple", "rules": [
       {"key": "prune", "kind": "prune", "title": "Lightly prune {name} while dormant", "anchor": "last_frost", "offset_weeks": -10, "window_weeks": 5, "detail": "Remove dead and crossing wood only; finish before sap rises."},
       {"key": "mulch", "kind": "mulch", "title": "Refresh mulch around {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 4}
     ]},
-    "conifer": {"name": "Conifer", "aliases": ["spruce", "fir", "hemlock", "cedar", "juniper", "arborvitae", "evergreen", "evergreen tree"], "category": "conifer", "lifecycle": "perennial", "rules": [
+    "conifer": {"name": "Conifer or evergreen tree", "rules": [
       {"key": "inspect", "kind": "inspect", "title": "Check {name} for winter burn and pests", "anchor": "last_frost", "offset_weeks": 0, "window_weeks": 3},
       {"key": "mulch", "kind": "mulch", "title": "Refresh mulch around {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 4},
       {"key": "water_in", "kind": "water", "title": "Water {name} deeply before the ground freezes", "anchor": "first_frost", "offset_weeks": 2, "window_weeks": 3}
     ]},
-    "pine": {"name": "Pine", "aliases": ["pines", "black pine", "niwaki pine", "mugo pine"], "category": "conifer", "lifecycle": "perennial", "rules": [
+    "pine": {"name": "Pine", "rules": [
       {"key": "candle", "kind": "prune", "title": "Candle-prune {name}", "anchor": "last_frost", "offset_weeks": 4, "window_weeks": 3, "detail": "Shorten new candles before the needles open."},
       {"key": "needles", "kind": "prune", "title": "Thin old needles on {name}", "anchor": "first_frost", "offset_weeks": 0, "window_weeks": 6},
       {"key": "mulch", "kind": "mulch", "title": "Refresh mulch around {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 4}
     ]},
-    "boxwood": {"name": "Boxwood", "aliases": ["box", "buxus", "yew", "holly", "evergreen hedge"], "category": "shrub", "lifecycle": "perennial", "rules": [
+    "boxwood": {"name": "Evergreen hedge or topiary", "rules": [
       {"key": "shear", "kind": "prune", "title": "Shear {name}", "anchor": "last_frost", "offset_weeks": 5, "window_weeks": 4, "detail": "After the first flush of growth has hardened."}
     ]},
-    "azalea": {"name": "Azalea", "aliases": ["azaleas", "rhododendron", "camellia"], "category": "shrub", "lifecycle": "perennial", "rules": [
+    "azalea": {"name": "Azalea, rhododendron or camellia", "rules": [
       {"key": "prune", "kind": "prune", "title": "Prune {name} right after flowering", "anchor": "last_frost", "offset_weeks": 5, "window_weeks": 4, "detail": "Later pruning removes next year's flower buds."},
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name} (acid feed)", "anchor": "last_frost", "offset_weeks": 5, "window_weeks": 4}
     ]},
-    "hydrangea": {"name": "Hydrangea (panicle or smooth)", "aliases": ["hydrangea", "hydrangeas", "panicle hydrangea", "smooth hydrangea"], "category": "shrub", "lifecycle": "perennial", "rules": [
+    "hydrangea": {"name": "Hydrangea (panicle or smooth)", "rules": [
       {"key": "prune", "kind": "prune", "title": "Prune {name}", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 4, "detail": "Only for types that bloom on new wood. Bigleaf hydrangeas are just deadheaded."}
     ]},
-    "rose": {"name": "Rose", "aliases": ["roses", "shrub rose", "climbing rose"], "category": "shrub", "lifecycle": "perennial", "rules": [
+    "rose": {"name": "Rose", "rules": [
       {"key": "prune", "kind": "prune", "title": "Prune {name}", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 3},
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name}", "anchor": "last_frost", "offset_weeks": 0, "window_weeks": 3},
       {"key": "deadhead", "kind": "deadhead", "title": "Deadhead {name}", "every_days": 14, "anchor": "last_frost", "offset_weeks": 6, "until_anchor": "first_frost", "until_offset_weeks": -5}
     ]},
-    "lavender": {"name": "Lavender", "aliases": ["rosemary", "sage", "santolina"], "category": "shrub", "lifecycle": "perennial", "rules": [
+    "lavender": {"name": "Lavender or woody Mediterranean herb", "rules": [
       {"key": "tidy", "kind": "prune", "title": "Trim {name} once new growth shows", "anchor": "last_frost", "offset_weeks": 0, "window_weeks": 3, "detail": "Never cut back into bare wood."},
       {"key": "shear", "kind": "prune", "title": "Shear {name} after flowering", "anchor": "last_frost", "offset_weeks": 14, "window_weeks": 3}
     ]},
-    "perennial": {"name": "Herbaceous perennial", "aliases": ["perennial", "perennials", "hosta", "fern", "peony", "daylily", "coneflower", "phlox", "delphinium", "foxglove", "catmint", "iris"], "category": "perennial", "lifecycle": "perennial", "rules": [
+    "perennial": {"name": "Herbaceous perennial", "rules": [
       {"key": "cut_back", "kind": "cut", "title": "Cut back last year's growth on {name}", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 5},
       {"key": "divide", "kind": "divide", "title": "Divide {name} if crowded", "anchor": "last_frost", "offset_weeks": -2, "window_weeks": 4}
     ]},
-    "ornamental_grass": {"name": "Ornamental grass", "aliases": ["grasses", "miscanthus", "switchgrass", "little bluestem", "hakone grass"], "category": "grass", "lifecycle": "perennial", "rules": [
+    "ornamental_grass": {"name": "Ornamental grass", "rules": [
       {"key": "cut_back", "kind": "cut", "title": "Cut {name} back to a few inches", "anchor": "last_frost", "offset_weeks": -7, "window_weeks": 4}
     ]},
-    "spring_bulb": {"name": "Spring bulbs", "aliases": ["bulbs", "daffodil", "daffodils", "tulip", "tulips", "crocus", "allium"], "category": "bulb", "lifecycle": "perennial", "rules": [
+    "spring_bulb": {"name": "Spring bulbs", "rules": [
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name} as shoots emerge", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 3},
       {"key": "foliage", "kind": "cut", "title": "Remove yellowed foliage from {name}", "anchor": "last_frost", "offset_weeks": 7, "window_weeks": 3, "detail": "Leave the leaves until they yellow so the bulbs recharge."}
     ]},
-    "lawn": {"name": "Lawn", "aliases": ["grass", "turf", "grass path"], "category": "lawn", "lifecycle": "perennial", "rules": [
+    "lawn": {"name": "Lawn", "rules": [
       {"key": "mow", "kind": "mow", "title": "Mow {name}", "every_days": 7, "anchor": "last_frost", "offset_weeks": -3, "until_anchor": "first_frost", "until_offset_weeks": 2},
       {"key": "overseed", "kind": "soil", "title": "Aerate and overseed {name}", "anchor": "first_frost", "offset_weeks": -8, "window_weeks": 4},
       {"key": "feed", "kind": "fertilize", "title": "Fertilize {name}", "anchor": "first_frost", "offset_weeks": -6, "window_weeks": 3}
     ]},
-    "wildflower_meadow": {"name": "Wildflower meadow", "aliases": ["meadow", "wildflowers"], "category": "meadow", "lifecycle": "perennial", "rules": [
+    "wildflower_meadow": {"name": "Wildflower meadow", "rules": [
       {"key": "annual_cut", "kind": "cut", "title": "Cut {name} and remove the clippings", "anchor": "last_frost", "offset_weeks": -8, "window_weeks": 4}
     ]}
   }

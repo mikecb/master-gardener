@@ -27,7 +27,8 @@ your Home Assistant config directory and restart. Requires Home Assistant
    - a **to-do list** of what needs doing now (tick to record it; add an item
      to report a problem such as "grass too long"),
    - sensors: **Tasks due**, **Tasks overdue**, **Next task**, **Plantings**.
-3. Record what grows where with the **Master Gardener: Add planting** action:
+3. Find a plant's id with the **Master Gardener: Search plants** action, then
+   record what grows where with **Master Gardener: Add planting**:
 
    ```yaml
    action: master_gardener.add_planting
@@ -38,7 +39,7 @@ your Home Assistant config directory and restart. Requires Home Assistant
    ```
 
    With an April 15 last frost this schedules: start indoors from February 18,
-   plant out from April 22, harvest from July 1.
+   plant out from April 22, harvest from June 21.
 
 The **Garden** device has a calendar and task counts for the whole property.
 
@@ -62,16 +63,46 @@ only advised in the growing season and never while the soil is dry.
 - `master_gardener.set_planting_status`: mark a planting `dead` or `removed`.
 - `master_gardener.add_task`: a one-off task in an area.
 - `master_gardener.list_plantings`: everything recorded, with ids.
+- `master_gardener.search_plants`: search the plant catalogue.
+- `master_gardener.refresh_catalogue`: download the latest catalogue now.
 
-## Catalog
+## Plant catalogue
 
-Vegetables and herbs: tomato, pepper, eggplant, broccoli, cabbage, kale, onion,
-lettuce, spinach, peas, radish, carrot, beet, potato, beans, cucumber, zucchini,
-winter squash, sweet corn, garlic, basil. Fruit: strawberry, blueberry, apple
-(and pear), peach (and other stone fruit). Ornamentals: deciduous tree, Japanese
-maple, conifer, pine, boxwood, azalea, hydrangea, rose, lavender, perennial,
-ornamental grass, spring bulbs, lawn, wildflower meadow. Common names such as
-"hosta", "oak" or "daffodils" map to the matching type.
+Plants come from [OpenPlantDB](https://github.com/cwfrazier1/openplantdb), an
+open (CC0) database of about 38,000 garden plants and cultivars. Master
+Gardener downloads it from GitHub (about 15 MB over the wire) the first time
+it starts and keeps a local copy in `master_gardener/` in your config folder.
+It is downloaded again whenever the integration is updated, checked for
+changes once a week, and can be refreshed by hand with **Refresh plant
+catalogue**. The **Plant catalogue** sensor on the Garden device shows how
+many plants it holds and when it was fetched. Setup does not wait for the
+download, and plantings you already have keep working without it.
+
+```yaml
+action: master_gardener.search_plants
+data:
+  query: japanese maple
+```
+
+Search returns only plants hardy in your zone unless you ask for all zones.
+Use the `id` it returns as the `plant` when adding a planting; an exact name
+works too when only one plant has it.
+
+OpenPlantDB supplies each plant's sowing or planting time and, for edibles,
+days to harvest. It has nothing on upkeep, so Master Gardener matches each
+plant to one of its own **care profiles** for pruning, feeding, mowing and
+fruit harvest: apple or pear, stone fruit, blueberry, strawberry, deciduous
+tree, Japanese maple, conifer, pine, evergreen hedge, azalea, hydrangea, rose,
+lavender, perennial, ornamental grass, spring bulb, lawn, wildflower meadow.
+The match is by botanical name and type; override it with `care_profile` when
+adding a planting. Shrubs, vines and houseplants outside those groups get
+planting tasks only.
+
+A perennial's **Plant …** task comes round each year until you tick it off or
+give the planting a planted date.
+
+OpenPlantDB's values are typical ranges, compiled largely by automated means;
+treat dates as planning guidance and correct them against local experience.
 
 ## Develop
 

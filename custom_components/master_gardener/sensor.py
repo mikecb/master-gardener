@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -22,7 +23,11 @@ async def async_setup_entry(
 ) -> None:
     manager = entry.runtime_data
     async_add_entities(
-        [TasksDueSensor(manager, None), TasksOverdueSensor(manager, None)]
+        [
+            TasksDueSensor(manager, None),
+            TasksOverdueSensor(manager, None),
+            PlantCatalogueSensor(manager),
+        ]
     )
     for area in manager.area_subentries:
         async_add_entities(
@@ -111,4 +116,27 @@ class PlantingsSensor(GardenEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"plantings": [p.to_dict() for p in self._plantings()]}
+        return {"plantings": [p.to_dict(with_record=False) for p in self._plantings()]}
+
+
+class PlantCatalogueSensor(GardenEntity, SensorEntity):
+    """How many plants the downloaded catalogue holds, and how fresh it is."""
+
+    _attr_translation_key = "plant_catalogue"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, manager) -> None:
+        super().__init__(manager, None, "plant_catalogue")
+
+    @property
+    def native_value(self) -> int | None:
+        return self.manager.plants.meta.get("plants")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        meta = self.manager.plants.meta
+        return {
+            key: meta[key]
+            for key in ("fetched_at", "checked_at", "source")
+            if key in meta
+        }

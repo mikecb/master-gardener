@@ -150,6 +150,10 @@
       "plantings": {
         "name": "Plantings",
         "unit_of_measurement": "plantings"
+      },
+      "plant_catalogue": {
+        "name": "Plant catalogue",
+        "unit_of_measurement": "plants"
       }
     }
   }

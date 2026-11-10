@@ -51,19 +51,25 @@ class Planting:
     id: str
     area_id: str
     name: str
-    plant: str | None = None  # catalog key, None if not in the catalog
+    plant: str | None = None  # OpenPlantDB slug, None if not in the database
+    plant_data: dict | None = None  # that plant's record, kept with the planting
+    profile: str | None = None  # care profile supplying upkeep tasks
     quantity: int = 1
     planted_on: date | None = None
     added_on: date | None = None
     status: str = ACTIVE
     notes: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self, *, with_record: bool = True) -> dict:
+        """As stored; with_record=False leaves out the bulky plant record."""
+        record = {"plant_data": self.plant_data} if with_record else {}
         return {
             "id": self.id,
             "area_id": self.area_id,
             "name": self.name,
             "plant": self.plant,
+            **record,
+            "profile": self.profile,
             "quantity": self.quantity,
             "planted_on": _iso(self.planted_on),
             "added_on": _iso(self.added_on),
@@ -78,6 +84,8 @@ class Planting:
             area_id=data["area_id"],
             name=data["name"],
             plant=data.get("plant"),
+            plant_data=data.get("plant_data"),
+            profile=data.get("profile"),
             quantity=data.get("quantity", 1),
             planted_on=_date(data.get("planted_on")),
             added_on=_date(data.get("added_on")),
