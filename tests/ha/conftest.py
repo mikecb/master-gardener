@@ -1,6 +1,5 @@
 """Fixtures for tests that load the integration into a real Home Assistant core."""
 
-
 import pytest
 from catalogue_helpers import mock_catalogue
 from pytest_homeassistant_custom_component.common import MockConfigEntry
