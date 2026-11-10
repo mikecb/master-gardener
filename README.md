@@ -6,7 +6,11 @@ harvest, area by area, counted from your own frost dates. See
 
 ## Install
 
-Copy `custom_components/master_gardener` into the `custom_components` folder of
+With HACS: open HACS, choose **Custom repositories** from the menu, add
+`https://github.com/mikecb/master-gardener` with type **Integration**, then
+download Master Gardener and restart.
+
+Manually: copy `custom_components/master_gardener` into the `custom_components` folder of
 your Home Assistant config directory and restart. Requires Home Assistant
 2026.8 or newer.
 
