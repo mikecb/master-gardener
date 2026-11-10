@@ -117,7 +117,8 @@ async def test_get_seed_until_it_is_in_the_inventory(hass, freezer):
             "unit": "packets",
             "expiry": None,
             "expired": False,
-            "plant": None,  # not a catalogue name: matched by name instead
+            "plant": "tomato",  # not a catalogue name: the closest plant
+            "plant_guessed": True,
         }
     ]
 
@@ -211,3 +212,77 @@ async def test_configure_picks_the_inventory(hass):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done(wait_background_tasks=True)
     assert entry.runtime_data.seed_inventory == SENSOR
+
+
+async def test_packets_are_proposed_as_their_window_nears(hass, freezer):
+    freezer.move_to(JAN_10)
+    inventory = FakeInventory(
+        hass,
+        [
+            {"name": "Blush Cherry Tomato", "quantity": 1, "unit": "packet"},
+            {"name": "Zinnia", "quantity": 1, "unit": "packet"},
+        ],
+    )
+    entry = _entry(hass)
+    await _setup(hass, entry)
+    manager = entry.runtime_data
+
+    proposed = await _call(hass, "list_plantings", {"status": "proposed"})
+    (tomato,) = proposed["plantings"]
+    assert (tomato["name"], tomato["area"], tomato["plant"]) == (
+        "Blush Cherry Tomato",
+        "Vegetable garden",
+        "tomato",
+    )
+    assert tomato["from_seed"] == "Blush Cherry Tomato"
+    assert tomato["notes"] == (
+        "Proposed from your seed inventory: Blush Cherry Tomato (1 packet)."
+        " Its dates are those of Tomato, the closest plant in the catalogue."
+        " Its window opens 2027-02-18."
+    )
+    # Proposals get no tasks, and zinnias have no area of their style here.
+    assert not [t for t in await _tasks(hass) if "Blush" in t]
+
+    # Accepting: tasks start, and the seed on hand is named; no purchase.
+    await _call(
+        hass, "set_planting_status", {"planting_id": tomato["id"], "status": "active"}
+    )
+    planting = manager.plantings[tomato["id"]]
+    assert (planting.bought_on, planting.cost) == (None, None)
+    tasks = await _tasks(hass)
+    sow = tasks["Start Blush Cherry Tomato indoors"]
+    assert sow["detail"].endswith("Seed on hand: Blush Cherry Tomato (1 packet).")
+    assert not [t for t in tasks if t.startswith("Buy ")]
+
+    # Nothing is proposed twice, even after the packet is read again.
+    inventory.publish()
+    hass.states.async_set(SENSOR, "2", {"inventory_id": "inv1", "again": True})
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(manager.plantings) == 1
+
+
+async def test_declined_packets_stay_declined(hass, freezer):
+    freezer.move_to(JAN_10)
+    FakeInventory(hass, [{"name": "Danvers carrot", "quantity": 1}])
+    entry = _entry(hass)
+    await _setup(hass, entry)
+    manager = entry.runtime_data
+    (carrot,) = manager.plantings.values()
+    manager.set_planting_status(carrot.id, "removed", "Not this year")
+    manager.async_seed_inventory_changed()
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert [p.status for p in manager.plantings.values()] == ["removed"]
+
+
+async def test_a_packet_is_proposed_when_its_day_comes(hass, freezer):
+    """Checked daily: an autumn sowing is proposed in its season."""
+    freezer.move_to(JAN_10)
+    FakeInventory(hass, [{"name": "Garlic", "quantity": 4, "unit": "bulbs"}])
+    entry = _entry(hass)
+    await _setup(hass, entry)
+    assert entry.runtime_data.plantings == {}
+    freezer.move_to("2027-07-01 06:00:00+00:00")
+    entry.runtime_data.async_seed_inventory_changed()
+    await hass.async_block_till_done(wait_background_tasks=True)
+    (garlic,) = entry.runtime_data.plantings.values()
+    assert (garlic.name, garlic.status) == ("Garlic", "proposed")

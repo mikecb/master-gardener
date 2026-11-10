@@ -176,6 +176,28 @@ async def test_configure_offers_the_station(hass, aioclient_mock):
     assert source["nearest_station"]["station"] == "USC00441593"
 
 
+async def test_configure_falls_back_to_home(hass, aioclient_mock):
+    """No ZIP code kept: the station nearest Home Assistant's home is offered."""
+    hass.config.latitude, hass.config.longitude = LAT, LON
+    mock_noaa(aioclient_mock)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Master Gardener",
+        data={"last_frost": "04-15", "first_frost": "10-25"},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert "CHARLOTTESVILLE 2W, VA" in result["description_placeholders"]["station"]
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"last_frost": "2027-04-15", "first_frost": "2027-10-25", "use_station": True},
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert entry.runtime_data.site.last_frost == (4, 2)
+
+
 async def test_configure_without_a_station(hass, entry):
     """No ZIP code (or no answer): the form is as before, with no switch."""
     assert await hass.config_entries.async_setup(entry.entry_id)

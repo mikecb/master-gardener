@@ -221,6 +221,16 @@ estimate. Master Gardener rereads the inventory as soon as it changes.
 If the user has no seed inventory and wants one, explain how to create one in
 Simple Inventory and pick its sensor under **Configure** in Master Gardener.
 
+Master Gardener itself proposes planting packets as their windows near:
+proposed plantings with `from_seed` set and notes beginning "Proposed from
+your seed inventory". Treat them like your own proposals: in a check-in,
+list the undecided ones, say whether each suits its area this year (crop
+rotation, space, what failed there before), and offer to accept
+(`set_planting_status` `active`) or decline (`removed`, with why). Where the
+notes say the dates are those of the closest catalogue plant, check that
+plant is a fair stand-in; if not, suggest a better one through Manage
+plantings.
+
 ## A scheduled check-in
 
 Home Assistant cannot call you. If you are run on a schedule, do the weekly

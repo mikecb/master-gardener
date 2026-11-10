@@ -15,12 +15,25 @@ import re
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
-from .models import ACTIVE, Planting, Task
+from .models import ACTIVE, PLANNED, Planting, Site, Task
+from .planting_rules import rules_for
+from .schedule import PLANTING_KINDS
 
 SOW_KINDS = {"sow_indoors", "direct_sow"}
 ORDER_KIND = "order_seed"
 # Seed is wanted in hand this long before the sowing window opens.
 ORDER_LEAD = timedelta(weeks=6)
+# A packet is proposed for planting this long before its window opens.
+PROPOSE_LEAD = timedelta(weeks=12)
+# Which garden styles suit which kind of plant, best first.
+AREA_STYLES = {
+    "vegetable": ("vegetable",),
+    "herb": ("vegetable", "mediterranean", "cottage"),
+    "fruit": ("orchard", "vegetable"),
+    "berry": ("orchard", "vegetable"),
+    "flower": ("cottage", "english", "meadow", "mediterranean"),
+    "cover-crop": ("vegetable", "meadow"),
+}
 
 
 @dataclass(frozen=True)
@@ -31,6 +44,7 @@ class SeedItem:
     expiry: date | None = None
     aliases: tuple[str, ...] = ()
     record: dict | None = None  # the catalogue plant its name resolves to
+    guessed: bool = False  # record is the closest plant, not the name itself
 
     @property
     def names(self) -> list[str]:
@@ -167,3 +181,71 @@ def apply_seed(
     out += orders.values()
     out.sort(key=lambda t: (t.start, t.end, t.title))
     return out
+
+
+@dataclass(frozen=True)
+class Proposal:
+    """A packet worth planting soon, and where."""
+
+    seed: SeedItem
+    area_id: str
+    opens: date  # when its sowing or planting window opens
+
+
+def next_window(record: dict, site: Site, today: date) -> tuple[date, date] | None:
+    """The coming (or current) sowing or planting window for a plant."""
+    rule = next(
+        (r for r in rules_for(record) if r["kind"] in PLANTING_KINDS and "anchor" in r),
+        None,
+    )
+    if rule is None:
+        return None
+    for year in (today.year, today.year + 1):
+        opens = site.anchor(rule["anchor"], year) + timedelta(
+            weeks=rule["offset_weeks"]
+        )
+        closes = opens + timedelta(weeks=rule.get("window_weeks", 1), days=-1)
+        if closes >= today:
+            return opens, closes
+    return None  # pragma: no cover - next year's window is always ahead
+
+
+def pick_area(record: dict, areas: list[tuple[str, str]]) -> str | None:
+    """The first area whose style suits the plant: areas are (id, style)."""
+    for style in AREA_STYLES.get(record.get("category", ""), ()):
+        for area_id, area_style in areas:
+            if area_style == style:
+                return area_id
+    return None
+
+
+def proposals(
+    items: list[SeedItem],
+    plantings: list[Planting],
+    areas: list[tuple[str, str]],
+    site: Site,
+    today: date,
+) -> list[Proposal]:
+    """Packets whose window opens within PROPOSE_LEAD and that nothing covers.
+
+    A packet is covered once anything was proposed from it (whatever became
+    of that), or by a growing or planned planting it would sow.
+    """
+    proposed = {p.from_seed for p in plantings if p.from_seed}
+    current = [p for p in plantings if p.status in (ACTIVE, PLANNED)]
+    found = []
+    for item in items:
+        if item.name in proposed or item.record is None:
+            continue
+        if item.quantity is not None and item.quantity <= 0:
+            continue
+        if item.expiry and item.expiry < today:
+            continue
+        if any(matches(item, p) for p in current):
+            continue
+        window = next_window(item.record, site, today)
+        area_id = pick_area(item.record, areas)
+        if window is None or area_id is None or window[0] - today > PROPOSE_LEAD:
+            continue
+        found.append(Proposal(seed=item, area_id=area_id, opens=window[0]))
+    return found

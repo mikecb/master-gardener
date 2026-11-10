@@ -131,6 +131,17 @@ inventory's sensor changes and once the plant catalogue is ready.
   expired seed. It is completed like any task, and disappears once seed is
   entered. Without a seed inventory chosen there are no seed tasks at all.
 - A failed read keeps the last good one; no read yet means no seed tasks.
+- A packet's catalogue plant is the one its name resolves to, or else the
+  likeliest plant for its name without packet words (mix, organic,
+  heirloom...) and then for ever shorter tails of it ("Blush Cherry Tomato":
+  cherry tomato, tomato), which must be the kind the name ends with (a
+  mustard mix must be a mustard). Such a guess is flagged.
+- Proposals: a usable packet with a catalogue plant, not yet proposed (the
+  planting keeps `from_seed`), not covered by a growing or planned planting,
+  and with its sowing or planting window opening within twelve weeks, is
+  proposed in the first area whose style suits its category. Checked when
+  the inventory changes, when the catalogue arrives, and daily. Accepting a
+  seed proposal records no purchase.
 
 ### Build plan rules
 

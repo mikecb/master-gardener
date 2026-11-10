@@ -1,5 +1,7 @@
 """Fixtures for tests that load the integration into a real Home Assistant core."""
 
+import re
+
 import pytest
 from catalogue_helpers import mock_catalogue
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -53,4 +55,10 @@ def catalogue(aioclient_mock, monkeypatch, tmp_path):
     # The fixture is far smaller than a real export.
     monkeypatch.setattr(plantdb, "MIN_PLANTS", 1)
     mock_catalogue(aioclient_mock)
+    # Configure looks for a weather station near home when it has no ZIP
+    # code; around the test harness's home (San Diego) there is none.
+    aioclient_mock.get(
+        re.compile(r"ncei\.noaa\.gov/access/services/search/.*bbox=33\."),
+        json={"results": []},
+    )
     return tmp_path

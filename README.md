@@ -25,7 +25,8 @@ your Home Assistant config directory and restart. Requires Home Assistant
    half of all years). Where no station has them, as in frost-free places, it
    shows the frost dates typical for your zone instead. Correct them if you
    know better (also possible later under **Configure**, which also offers
-   the station's dates to a garden set up before this lookup existed).
+   the station's dates to a garden set up before this lookup existed, going
+   by Home Assistant's home location if it has no ZIP code).
 2. On the integration page choose **Add garden area** for each area (vegetable
    garden, orchard, cottage garden...). Each becomes a device with:
    - a **calendar** of every task window,
@@ -121,6 +122,18 @@ catalogue plant when its name is one, otherwise by name (aliases count), so
 `Carrots`, `Danvers carrot` and an item with the alias `carrot` all cover a
 carrot planting. An item with quantity 0 counts as used up. The inventory is
 read again whenever it changes.
+
+Packets also become **proposals**, the way an AI gardener's suggestions do.
+About twelve weeks before a packet's sowing or planting window opens, if
+nothing growing or planned would use it, Master Gardener proposes planting it
+in an area that suits it (vegetables and herbs in a vegetable garden, fruit in
+an orchard, flowers in a cottage, English or meadow garden). Decide in
+**Manage plantings**: accept it to schedule its sowing, or turn it down. A
+packet is proposed once; turning it down is remembered. Packets the catalogue
+does not know by name ("Blush Cherry Tomato") take the dates of the closest
+plant it does know ("Cherry Tomato"), which the proposal's notes name, and
+keep your name. Accepting a packet is not a purchase: nothing is added to the
+budget.
 
 ## Build plan and budget
 
