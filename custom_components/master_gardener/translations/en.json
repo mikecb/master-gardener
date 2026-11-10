@@ -144,6 +144,134 @@
         "catalogue_not_ready": "The plant catalogue is still downloading. Try again in a few minutes.",
         "not_loaded": "Master Gardener is not running. Reload it and try again."
       }
+    },
+    "manage_plantings": {
+      "entry_type": "Planting changes",
+      "initiate_flow": {
+        "user": "Manage plantings"
+      },
+      "step": {
+        "user": {
+          "title": "Manage plantings",
+          "description": "Which garden area is it in?",
+          "data": {
+            "area": "Garden area"
+          }
+        },
+        "pick": {
+          "title": "Manage plantings",
+          "description": "Which planting in {area}? Plants that died or were removed are kept as history and are not listed.",
+          "data": {
+            "planting": "Planting"
+          }
+        },
+        "action": {
+          "title": "{name}",
+          "description": "What happened?",
+          "menu_options": {
+            "died": "It died",
+            "removed": "It was removed or given away",
+            "edit": "Change its details",
+            "bought": "Bought it",
+            "dropped": "Take it off the build plan",
+            "accept_planned": "Yes: add it to the build plan",
+            "accept_active": "Yes: bought it, or planting it now",
+            "declined": "No: turn the proposal down"
+          }
+        },
+        "died": {
+          "title": "{name} died",
+          "description": "It stays in the history, so later advice does not repeat the mistake.",
+          "data": {
+            "notes": "What happened?"
+          },
+          "data_description": {
+            "notes": "Optional, but it decides the replacement: deer, drought, wet feet, frost, too much shade..."
+          }
+        },
+        "removed": {
+          "title": "{name} was removed",
+          "data": {
+            "notes": "Why?"
+          },
+          "data_description": {
+            "notes": "Optional."
+          }
+        },
+        "dropped": {
+          "title": "Take {name} off the build plan",
+          "data": {
+            "notes": "Why?"
+          },
+          "data_description": {
+            "notes": "Optional. Kept so the same idea is not proposed again."
+          }
+        },
+        "declined": {
+          "title": "Turn down {name}",
+          "data": {
+            "notes": "Why not?"
+          },
+          "data_description": {
+            "notes": "Optional. Kept so the same idea is not proposed again."
+          }
+        },
+        "bought": {
+          "title": "Bought {name}",
+          "description": "Its planting tasks start now, and the cost counts against this year's budget.",
+          "data": {
+            "cost": "What it cost"
+          },
+          "data_description": {
+            "cost": "Leave the estimate if you don't know."
+          }
+        },
+        "accept_active": {
+          "title": "Plant {name}",
+          "description": "Its planting tasks start now, and the cost counts against this year's budget.",
+          "data": {
+            "cost": "What it cost"
+          },
+          "data_description": {
+            "cost": "Leave the estimate if you don't know."
+          }
+        },
+        "edit": {
+          "title": "Change {name}",
+          "description": "{suggestions}",
+          "data": {
+            "name": "Name",
+            "quantity": "Quantity",
+            "plant": "Catalogue plant id",
+            "care_profile": "Care profile",
+            "when": "Planted",
+            "planted_on": "Date planted",
+            "estimated_cost": "Estimated cost",
+            "notes": "Notes"
+          },
+          "data_description": {
+            "plant": "Change it if the wrong plant was matched; find ids with the Search plants action. Clear it for a plant the catalogue does not have.",
+            "care_profile": "The kind of upkeep it gets. Clear it to choose from the plant.",
+            "planted_on": "Only used with \"On a date\"."
+          }
+        }
+      },
+      "error": {
+        "plant_ambiguous": "Several plants match. Use one of the ids listed above.",
+        "plant_unknown": "No plant in the catalogue has that id or name.",
+        "date_needed": "Pick the date it was planted."
+      },
+      "abort": {
+        "recorded_dead": "{name} is recorded as dead.",
+        "recorded_removed": "{name} is recorded as removed.",
+        "recorded_dropped": "{name} is off the build plan.",
+        "recorded_declined": "{name} is turned down.",
+        "recorded_planned": "{name} is in the build plan.",
+        "recorded_bought": "{name} is recorded as bought. Its planting tasks are on the area's to-do list.",
+        "recorded_edit": "{name} is updated.",
+        "no_plantings": "There are no plantings to manage yet. Add some with Add plantings.",
+        "not_loaded": "Master Gardener is not running. Reload it and try again."
+      }
     }
   },
   "selector": {
@@ -175,6 +303,13 @@
         "established": "Before this year (date unknown)",
         "this_season": "This season",
         "on_date": "On a date"
+      }
+    },
+    "edit_planted_when": {
+      "options": {
+        "established": "Before this year (date unknown)",
+        "on_date": "On a date",
+        "not_yet": "Not planted yet"
       }
     }
   },

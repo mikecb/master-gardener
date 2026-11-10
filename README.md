@@ -36,6 +36,13 @@ your Home Assistant config directory and restart. Requires Home Assistant
    from, or keeps your name as typed. Plants recorded as there before this
    year get their upkeep tasks but no planting task.
 
+   Later, **Manage plantings** on the same page records what happens to a
+   planting: it died (say what killed it, so later advice avoids repeating
+   it), it was removed, a planned plant was bought, or a proposal is accepted
+   or turned down. **Change its details** fixes the name, quantity, planting
+   date, care profile, or the catalogue plant if the wrong one was matched.
+   Dead and removed plantings are kept as history.
+
    Automations and agents use the **Master Gardener: Add planting** action
    instead (find ids with **Search plants**):
 
