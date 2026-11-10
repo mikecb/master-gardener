@@ -64,6 +64,31 @@ The scheduling engine has no Home Assistant dependency; `tests/ha` loads the
 integration into a real Home Assistant core:
 
 ```bash
-python -m unittest discover tests   # engine only, no dependencies
-pytest                              # everything; needs pytest-homeassistant-custom-component
+pip install -r requirements-test.txt
+python -m unittest tests/test_engine.py   # engine only, needs nothing installed
+pytest --cov                              # everything
+ruff check . && ruff format --check .
 ```
+
+### Merge gates
+
+Changes reach `main` through pull requests, and every pull request must pass
+four checks (see `.github/workflows/ci.yml`):
+
+| Check | What it guards |
+| --- | --- |
+| Lint | `ruff` rules and formatting |
+| Tests | all tests on the pinned Home Assistant version, with at least 90% coverage |
+| Hassfest | Home Assistant's own validation of the manifest, services and translations |
+| HACS | the repository stays installable through HACS |
+
+The same checks run every Monday, so a new Home Assistant or HACS rule that
+breaks the integration is noticed without a merge. Dependabot proposes updates
+to the test harness (and with it the Home Assistant version tested).
+
+### Releasing
+
+Bump `version` in `manifest.json` through a pull request, then tag the merged
+commit, e.g. `git tag v0.2.0 && git push origin v0.2.0`. The release workflow
+refuses tags that don't match the manifest or aren't on `main`, reruns the
+checks, and publishes the GitHub release that HACS offers to users.

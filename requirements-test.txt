@@ -1,0 +1,4 @@
+# Pinned so a run is reproducible; Dependabot proposes the bumps.
+# pytest-homeassistant-custom-component pins the Home Assistant version tested.
+pytest-homeassistant-custom-component==0.13.375
+ruff==0.17.4

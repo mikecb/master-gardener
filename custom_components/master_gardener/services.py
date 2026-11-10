@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import voluptuous as vol
-
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
@@ -12,7 +11,8 @@ from homeassistant.core import (
     callback,
 )
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 
 from .const import DOMAIN
 from .engine.models import PLANTING_STATUSES
@@ -120,7 +120,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
             SupportsResponse.OPTIONAL,
         ),
         ("add_task", add_task, ADD_TASK_SCHEMA, SupportsResponse.OPTIONAL),
-        ("list_plantings", list_plantings, LIST_PLANTINGS_SCHEMA, SupportsResponse.ONLY),
+        (
+            "list_plantings",
+            list_plantings,
+            LIST_PLANTINGS_SCHEMA,
+            SupportsResponse.ONLY,
+        ),
     ):
         hass.services.async_register(
             DOMAIN, name, handler, schema=schema, supports_response=responds

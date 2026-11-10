@@ -39,9 +39,7 @@ class GardenEntity(Entity):
             self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry_id)})
 
     async def async_added_to_hass(self) -> None:
-        self.async_on_remove(
-            self.manager.async_add_listener(self.async_write_ha_state)
-        )
+        self.async_on_remove(self.manager.async_add_listener(self.async_write_ha_state))
 
     def tasks(self) -> list[Task]:
         """This area's tasks, or the whole property's."""
@@ -51,6 +49,4 @@ class GardenEntity(Entity):
         """Real (not projected) tasks that are due and/or overdue today."""
         today = self.manager.today
         wanted = states or (DUE, OVERDUE)
-        return [
-            t for t in self.tasks() if not t.projected and t.state(today) in wanted
-        ]
+        return [t for t in self.tasks() if not t.projected and t.state(today) in wanted]

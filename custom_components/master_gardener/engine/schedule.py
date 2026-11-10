@@ -165,7 +165,13 @@ def _expand(
             if since and finish < since:
                 continue
             tasks.append(
-                Task(id=task_id, start=begin, end=finish, completed_on=completed, **common)
+                Task(
+                    id=task_id,
+                    start=begin,
+                    end=finish,
+                    completed_on=completed,
+                    **common,
+                )
             )
     return tasks
 
