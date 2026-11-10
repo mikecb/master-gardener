@@ -1,0 +1,104 @@
+add_planting:
+  name: Add planting
+  description: Record something growing (or planned) in a garden area. Plants found in the built-in catalog get their yearly tasks scheduled automatically.
+  fields:
+    area:
+      name: Garden area
+      description: The area it grows in.
+      required: true
+      selector:
+        device:
+          integration: master_gardener
+    plant:
+      name: Plant
+      description: Catalog plant, e.g. tomato, garlic, apple, japanese maple, rose, lavender, perennial, lawn. Anything else is tracked without automatic tasks.
+      required: true
+      example: tomato
+      selector:
+        text:
+    name:
+      name: Name
+      description: Your own name for it, e.g. the variety. Used in task titles.
+      example: Cherokee Purple tomato
+      selector:
+        text:
+    quantity:
+      name: Quantity
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 10000
+          mode: box
+    planted_on:
+      name: Planted on
+      description: When it went in the ground. Leave empty if it is only planned.
+      selector:
+        date:
+    notes:
+      name: Notes
+      selector:
+        text:
+          multiline: true
+
+set_planting_status:
+  name: Set planting status
+  description: Report that a planting died or was removed (or bring it back). Its tasks stop, and the loss is kept as history.
+  fields:
+    planting_id:
+      name: Planting ID
+      description: From the area's Plantings sensor or the List plantings action.
+      required: true
+      selector:
+        text:
+    status:
+      name: Status
+      required: true
+      selector:
+        select:
+          options:
+            - active
+            - dead
+            - removed
+    notes:
+      name: Notes
+      description: What happened, e.g. "deer", "drowned in the wet corner".
+      selector:
+        text:
+          multiline: true
+
+add_task:
+  name: Add task
+  description: Add a one-off task or report a problem in an area, e.g. "Grass too long". Due today unless a date is given.
+  fields:
+    area:
+      name: Garden area
+      required: true
+      selector:
+        device:
+          integration: master_gardener
+    title:
+      name: Title
+      required: true
+      example: Grass too long
+      selector:
+        text:
+    due:
+      name: Due
+      selector:
+        date:
+    notes:
+      name: Notes
+      selector:
+        text:
+          multiline: true
+
+list_plantings:
+  name: List plantings
+  description: Return every recorded planting, optionally for one area.
+  fields:
+    area:
+      name: Garden area
+      selector:
+        device:
+          integration: master_gardener

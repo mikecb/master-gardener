@@ -1,0 +1,11 @@
+{
+  "domain": "master_gardener",
+  "name": "Master Gardener",
+  "codeowners": [],
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

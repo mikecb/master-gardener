@@ -1,0 +1,114 @@
+"""Sensors: task counts, the next task, and what is planted where."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+from .engine.models import ACTIVE, OVERDUE, UPCOMING
+from .entity import GardenEntity
+from .manager import GardenConfigEntry
+
+MAX_LISTED = 25
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: GardenConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    manager = entry.runtime_data
+    async_add_entities(
+        [TasksDueSensor(manager, None), TasksOverdueSensor(manager, None)]
+    )
+    for area in manager.area_subentries:
+        async_add_entities(
+            [
+                TasksDueSensor(manager, area),
+                TasksOverdueSensor(manager, area),
+                NextTaskSensor(manager, area),
+                PlantingsSensor(manager, area),
+            ],
+            config_subentry_id=area.subentry_id,
+        )
+
+
+class _TaskCountSensor(GardenEntity, SensorEntity):
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _states: tuple[str, ...] = ()
+
+    def __init__(self, manager, area) -> None:
+        super().__init__(manager, area, self._attr_translation_key)
+
+    @property
+    def native_value(self) -> int:
+        return len(self.actionable(*self._states))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        tasks = self.actionable(*self._states)[:MAX_LISTED]
+        return {
+            "tasks": [
+                {"id": t.id, "title": t.title, "due": t.end.isoformat()} for t in tasks
+            ]
+        }
+
+
+class TasksDueSensor(_TaskCountSensor):
+    """Everything that needs doing now, including what is overdue."""
+
+    _attr_translation_key = "tasks_due"
+
+
+class TasksOverdueSensor(_TaskCountSensor):
+    _attr_translation_key = "tasks_overdue"
+    _states = (OVERDUE,)
+
+
+class NextTaskSensor(GardenEntity, SensorEntity):
+    _attr_translation_key = "next_task"
+
+    def __init__(self, manager, area) -> None:
+        super().__init__(manager, area, "next_task")
+
+    def _next(self):
+        today = self.manager.today
+        for task in self.tasks():
+            if task.state(today) == UPCOMING:
+                return task
+        return None
+
+    @property
+    def native_value(self) -> str | None:
+        task = self._next()
+        return task.title[:255] if task else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        task = self._next()
+        if not task:
+            return {}
+        return {"start": task.start.isoformat(), "end": task.end.isoformat()}
+
+
+class PlantingsSensor(GardenEntity, SensorEntity):
+    """Count of living plantings; the attribute lists all, with their ids."""
+
+    _attr_translation_key = "plantings"
+
+    def __init__(self, manager, area) -> None:
+        super().__init__(manager, area, "plantings")
+
+    def _plantings(self):
+        return [p for p in self.manager.plantings.values() if p.area_id == self.area_id]
+
+    @property
+    def native_value(self) -> int:
+        return sum(1 for p in self._plantings() if p.status == ACTIVE)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"plantings": [p.to_dict() for p in self._plantings()]}

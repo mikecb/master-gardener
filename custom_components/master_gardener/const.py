@@ -1,0 +1,36 @@
+"""Constants for Master Gardener."""
+
+DOMAIN = "master_gardener"
+
+SUBENTRY_AREA = "area"
+
+CONF_LAST_FROST = "last_frost"
+CONF_FIRST_FROST = "first_frost"
+
+CONF_NAME = "name"
+CONF_STYLE = "style"
+CONF_LIGHT = "light"
+CONF_SIZE_SQFT = "size_sqft"
+CONF_ADJACENT = "adjacent"
+CONF_CHARACTER = "character"
+
+STYLES = [
+    "vegetable",
+    "orchard",
+    "cottage",
+    "english",
+    "japanese",
+    "mediterranean",
+    "conifer_woodland",
+    "native_woodland",
+    "meadow",
+    "lawn",
+    "other",
+]
+LIGHTS = ["full_sun", "part_shade", "shade", "mixed"]
+
+# How far back overdue tasks are kept, and how far ahead the calendar plans.
+LOOKBACK_DAYS = 180
+LOOKAHEAD_DAYS = 400
+# Completed items stay ticked on the to-do list this long.
+DONE_VISIBLE_DAYS = 7

@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Your climate",
+        "description": "Every sowing, pruning and harvest date is counted from your frost dates. Only the month and day are used. Look up the averages for your location; you can change them later.",
+        "data": {
+          "last_frost": "Average last spring frost",
+          "first_frost": "Average first autumn frost"
+        }
+      }
+    },
+    "error": {
+      "frost_order": "The last spring frost must come before the first autumn frost."
+    },
+    "abort": {
+      "single_instance_allowed": "Master Gardener is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Your climate",
+        "data": {
+          "last_frost": "Average last spring frost",
+          "first_frost": "Average first autumn frost"
+        }
+      }
+    },
+    "error": {
+      "frost_order": "The last spring frost must come before the first autumn frost."
+    }
+  },
+  "config_subentries": {
+    "area": {
+      "entry_type": "Garden area",
+      "initiate_flow": {
+        "user": "Add garden area",
+        "reconfigure": "Edit garden area"
+      },
+      "step": {
+        "user": {
+          "title": "Add garden area",
+          "data": {
+            "name": "Name",
+            "style": "Style",
+            "light": "Light",
+            "size_sqft": "Size",
+            "adjacent": "Next to",
+            "character": "Character"
+          },
+          "data_description": {
+            "adjacent": "Areas you can walk or see into from here.",
+            "character": "The feeling you want here, and anything notable about the site."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit garden area",
+          "data": {
+            "name": "Name",
+            "style": "Style",
+            "light": "Light",
+            "size_sqft": "Size",
+            "adjacent": "Next to",
+            "character": "Character"
+          },
+          "data_description": {
+            "adjacent": "Areas you can walk or see into from here.",
+            "character": "The feeling you want here, and anything notable about the site."
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "Garden area updated."
+      }
+    }
+  },
+  "selector": {
+    "style": {
+      "options": {
+        "vegetable": "Vegetable garden",
+        "orchard": "Orchard",
+        "cottage": "Cottage garden",
+        "english": "English garden",
+        "japanese": "Japanese garden",
+        "mediterranean": "Mediterranean",
+        "conifer_woodland": "Evergreen / Nordic forest",
+        "native_woodland": "Native woodland",
+        "meadow": "Wildflower meadow",
+        "lawn": "Lawn",
+        "other": "Other"
+      }
+    },
+    "light": {
+      "options": {
+        "full_sun": "Full sun",
+        "part_shade": "Part shade",
+        "shade": "Shade",
+        "mixed": "Mixed"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tasks_due": {
+        "name": "Tasks due",
+        "unit_of_measurement": "tasks"
+      },
+      "tasks_overdue": {
+        "name": "Tasks overdue",
+        "unit_of_measurement": "tasks"
+      },
+      "next_task": {
+        "name": "Next task"
+      },
+      "plantings": {
+        "name": "Plantings",
+        "unit_of_measurement": "plantings"
+      }
+    }
+  }
+}
