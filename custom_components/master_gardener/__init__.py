@@ -6,7 +6,10 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import (
+    async_track_state_change_event,
+    async_track_time_change,
+)
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
@@ -14,7 +17,12 @@ from .engine.catalog import Catalog
 from .manager import GardenConfigEntry, GardenManager
 from .services import async_setup_services
 
-PLATFORMS = [Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
+PLATFORMS = [
+    Platform.BINARY_SENSOR,
+    Platform.CALENDAR,
+    Platform.SENSOR,
+    Platform.TODO,
+]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -51,6 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bo
             hass, manager.async_refresh, hour=0, minute=0, second=10
         )
     )
+    # Soil readings drive the water and fertilizer advice.
+    if sensors := manager.care_sensor_ids():
+        entry.async_on_unload(
+            async_track_state_change_event(hass, sensors, manager.async_notify)
+        )
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     return True
 

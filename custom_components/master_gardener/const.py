@@ -15,6 +15,13 @@ CONF_LIGHT = "light"
 CONF_SIZE_SQFT = "size_sqft"
 CONF_ADJACENT = "adjacent"
 CONF_CHARACTER = "character"
+CONF_MOISTURE_SENSORS = "moisture_sensors"
+CONF_CONDUCTIVITY_SENSORS = "conductivity_sensors"
+CONF_DRY_BELOW = "dry_below"
+CONF_FEED_BELOW = "feed_below"
+
+CARE_WATER = "water"
+CARE_FEED = "feed"
 
 STYLES = [
     "vegetable",

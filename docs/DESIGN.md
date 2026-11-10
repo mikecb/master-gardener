@@ -48,15 +48,32 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
   rule, using the real planting date when known), `interval` (repeats through a
   season, rolling forward from when it was last done).
 
+### Soil care rules
+
+- With several sensors in an area the lowest reading decides.
+- Thresholds default by garden style (a vegetable bed wants water at 30%
+  moisture, a Mediterranean bed at 12%) and can be set per area. Moisture
+  percentages differ between sensor makes and soils, so expect to tune them.
+- Advice turns off only once the reading clears the threshold by a margin, so
+  a value hovering at the threshold does not flap.
+- Fertilizer is only advised in the feeding season (two weeks before the last
+  frost until six weeks before the first), and never while the soil is dry:
+  conductivity reads low in dry soil whatever the nutrient level.
+- A wildflower meadow is never fed by default.
+- Ticking a care task hides it for 12 hours (water) or 14 days (fertilizer);
+  the binary sensor keeps reporting what the soil says.
+
 ## Roadmap
 
 1. **Areas + calendar (built).** Areas, plantings, frost-anchored task
    calendar, per-area to-do lists, due/overdue sensors, feedback by adding
    tasks and reporting deaths.
-2. **Sensor-driven care.** Attach soil moisture, temperature, conductivity and
-   light sensors to areas. Engine rules turn readings plus forecast into
-   "water / hold off / feed" tasks and alerts. Frost and heat warnings for
-   tender plantings. Measured light hours replace the hand-entered light level.
+2. **Sensor-driven care (partly built).** Built: each area can name soil
+   moisture and conductivity sensors; `engine/care.py` turns the readings into
+   "needs water" and "needs fertilizer" advice, shown as binary sensors and as
+   to-do items. Still to do: hold off watering when rain is forecast, frost and
+   heat warnings for tender plantings, and measured light hours replacing the
+   hand-entered light level.
 3. **Site knowledge + advisor.** Pull public data for the property: hardiness
    zone, frost normals (replacing the hand-entered dates), soil survey, sun
    path. A `recommend` action sends one area's full context (style, character,
