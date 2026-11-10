@@ -33,7 +33,11 @@
         "title": "Your climate",
         "data": {
           "last_frost": "Average last spring frost",
-          "first_frost": "Average first autumn frost"
+          "first_frost": "Average first autumn frost",
+          "weather_entity": "Weather forecast"
+        },
+        "data_description": {
+          "weather_entity": "Optional. Its forecast holds off watering when rain is coming and warns when frost or heat threatens what you have planted."
         }
       }
     },
@@ -133,6 +137,12 @@
       },
       "needs_fertilizer": {
         "name": "Needs fertilizer"
+      },
+      "frost_risk": {
+        "name": "Frost risk"
+      },
+      "heat_risk": {
+        "name": "Heat risk"
       }
     },
     "sensor": {

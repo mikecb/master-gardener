@@ -2,7 +2,7 @@
 
 Plans and tracks the gardens of a property: what to sow, plant, prune, mow and
 harvest, area by area, counted from your own frost dates. See
-[docs/DESIGN.md](docs/DESIGN.md) for the full roadmap; this is phase 1.
+[docs/DESIGN.md](docs/DESIGN.md) for the design and the roadmap.
 
 ## Install
 
@@ -58,6 +58,27 @@ conductivity device class works. The area then gets:
 Thresholds default to the garden style and can be set per area. Fertilizer is
 only advised in the growing season and never while the soil is dry.
 
+## Weather forecast
+
+Open **Configure** on the integration and pick a **weather forecast** entity
+(any Home Assistant weather integration with a daily, twice-daily or hourly
+forecast). The forecast is read every hour, and then:
+
+- **Watering waits for rain.** When at least 5 mm (0.2 in) of rain is forecast
+  for today or tomorrow, **Needs water** stays off and says why. Soil well
+  below its threshold is watered anyway.
+- Each area gets a **Frost risk** binary sensor and a **Protect … from frost**
+  to-do item when a low forecast within three days threatens what is planted
+  there: 2 °C (36 °F) for tender plants, -2 °C (28 °F) for half-hardy ones.
+  Frost alerts stop four weeks after your average first autumn frost and
+  start again eight weeks before the last spring frost.
+- Each area gets a **Heat risk** binary sensor and a **Shield … from heat**
+  item when highs reach 30 °C (86 °F) over cool-season crops, or 35 °C (95 °F)
+  over anything planted in the last six weeks.
+
+Alerts name the plantings at risk. Only plantings that are in the ground
+count: an annual needs a planting date (ticking its **Plant …** task sets it).
+
 ## Actions
 
 Every action returns a response, and anywhere an action takes a garden area
@@ -65,7 +86,7 @@ you can give the area's name.
 
 | Action | What it does |
 | --- | --- |
-| `master_gardener.get_garden` | Climate, frost dates and every area with its style, light, size, character, neighbours, counts and soil state |
+| `master_gardener.get_garden` | Climate, frost dates and every area with its style, light, size, character, neighbours, counts, soil state and weather alerts |
 | `master_gardener.list_tasks` | Tasks due now, or coming up, with their ids |
 | `master_gardener.complete_task` | Record a task as done |
 | `master_gardener.add_task` | A one-off task or a reported problem in an area |

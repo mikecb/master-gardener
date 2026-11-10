@@ -16,6 +16,9 @@ from .models import Site
 # it turns off, so a value hovering at the threshold does not flap.
 WATER_MARGIN = 5.0  # percentage points
 FEED_MARGIN = 1.1  # factor
+# Forecast rain postpones watering only while the soil is above this share of
+# its threshold; drier than that, the plants cannot wait on a forecast.
+TOO_DRY_TO_WAIT = 0.6
 
 # Feed from shortly before the last frost until six weeks before the first:
 # late feeding pushes soft growth that the frost then kills.
@@ -71,9 +74,16 @@ class Advice:
 
 
 def water_advice(
-    moisture: list[float], dry_below: float, was_needed: bool = False
+    moisture: list[float],
+    dry_below: float,
+    was_needed: bool = False,
+    rain: str | None = None,
 ) -> Advice | None:
-    """None when there is no reading to judge by."""
+    """None when there is no reading to judge by.
+
+    `rain` says what rain is forecast (see weather.rain_note). Watering then
+    waits for it, unless the soil is too dry to gamble on a forecast.
+    """
     if not moisture:
         return None
     lowest = min(moisture)
@@ -82,6 +92,8 @@ def water_advice(
         reason = f"Soil moisture {lowest:.0f}% is below {dry_below:.0f}%"
         if lowest >= dry_below:
             reason = f"Soil moisture {lowest:.0f}% has not recovered yet"
+        if rain and lowest >= dry_below * TOO_DRY_TO_WAIT:
+            return Advice(False, f"{reason}, but {rain}", lowest, dry_below)
         return Advice(True, reason, lowest, dry_below)
     return Advice(False, f"Soil moisture {lowest:.0f}% is fine", lowest, dry_below)
 

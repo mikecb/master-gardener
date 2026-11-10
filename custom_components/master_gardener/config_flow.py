@@ -46,6 +46,7 @@ from .const import (
     CONF_NAME,
     CONF_SIZE_SQFT,
     CONF_STYLE,
+    CONF_WEATHER_ENTITY,
     CONF_ZIP_CODE,
     CONF_ZONE,
     DOMAIN,
@@ -57,6 +58,8 @@ from .engine.climate import frost_dates_for_zone
 
 # Public USDA Plant Hardiness Zone Map data, keyed by ZIP code.
 ZONE_URL = "https://phzmapi.org/{zip_code}.json"
+
+WEATHER_SELECTOR = EntitySelector(EntitySelectorConfig(domain="weather"))
 
 
 async def _lookup_zone(hass: HomeAssistant, zip_code: str) -> str:
@@ -183,12 +186,17 @@ class SiteOptionsFlow(OptionsFlow):
             data = _site_data(user_input)
             errors = _site_errors(data)
             if not errors:
+                # Left empty, the weather entity is dropped again.
+                if weather := user_input.get(CONF_WEATHER_ENTITY):
+                    data[CONF_WEATHER_ENTITY] = weather
                 return self.async_create_entry(data=data)
         current = {**self.config_entry.data, **self.config_entry.options}
+        schema = _site_schema(current[CONF_LAST_FROST], current[CONF_FIRST_FROST])
+        schema = schema.extend({vol.Optional(CONF_WEATHER_ENTITY): WEATHER_SELECTOR})
         return self.async_show_form(
             step_id="init",
-            data_schema=_site_schema(
-                current[CONF_LAST_FROST], current[CONF_FIRST_FROST]
+            data_schema=self.add_suggested_values_to_schema(
+                schema, {CONF_WEATHER_ENTITY: current.get(CONF_WEATHER_ENTITY)}
             ),
             errors=errors,
         )

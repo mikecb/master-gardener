@@ -20,8 +20,12 @@ CONF_CONDUCTIVITY_SENSORS = "conductivity_sensors"
 CONF_DRY_BELOW = "dry_below"
 CONF_FEED_BELOW = "feed_below"
 
+CONF_WEATHER_ENTITY = "weather_entity"
+
 CARE_WATER = "water"
 CARE_FEED = "feed"
+CARE_FROST = "frost"
+CARE_HEAT = "heat"
 
 STYLES = [
     "vegetable",
