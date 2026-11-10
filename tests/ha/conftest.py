@@ -24,7 +24,11 @@ def entry(hass):
                 "subentry_type": "area",
                 "title": "Vegetable garden",
                 "unique_id": None,
-                "data": {"name": "Vegetable garden", "style": "vegetable", "light": "full_sun"},
+                "data": {
+                    "name": "Vegetable garden",
+                    "style": "vegetable",
+                    "light": "full_sun",
+                },
             },
             {
                 "subentry_id": "lawn",

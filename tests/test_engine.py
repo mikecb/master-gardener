@@ -9,9 +9,9 @@ sys.path.insert(
     0, str(Path(__file__).parents[1] / "custom_components" / "master_gardener")
 )
 
-from engine.catalog import Catalog  # noqa: E402
-from engine.climate import frost_dates_for_zone  # noqa: E402
-from engine.models import (  # noqa: E402
+from engine.catalog import Catalog
+from engine.climate import frost_dates_for_zone
+from engine.models import (
     DEAD,
     DONE,
     DUE,
@@ -22,7 +22,7 @@ from engine.models import (  # noqa: E402
     Planting,
     Site,
 )
-from engine.schedule import build_tasks  # noqa: E402
+from engine.schedule import build_tasks
 
 CATALOG = Catalog.load()
 SITE = Site(last_frost=(4, 15), first_frost=(10, 25))
@@ -109,8 +109,15 @@ class VegetableCalendarTest(unittest.TestCase):
     def test_planted_on_completes_planting_and_moves_harvest(self):
         planted = date(2027, 5, 1)
         tasks = build(
-            [Planting(id="p1", area_id="veg", name="Tomato", plant="tomato",
-                      planted_on=planted)]
+            [
+                Planting(
+                    id="p1",
+                    area_id="veg",
+                    name="Tomato",
+                    plant="tomato",
+                    planted_on=planted,
+                )
+            ]
         )
         self.assertEqual(by_kind(tasks, "sow_indoors"), [])  # already in the past
         self.assertEqual(by_kind(tasks, "transplant")[0].completed_on, planted)
@@ -126,16 +133,24 @@ class VegetableCalendarTest(unittest.TestCase):
 
     def test_dead_and_unknown_plantings_make_no_tasks(self):
         baseline = build()
-        dead = Planting(id="p1", area_id="veg", name="Tomato", plant="tomato",
-                        status=DEAD)
+        dead = Planting(
+            id="p1", area_id="veg", name="Tomato", plant="tomato", status=DEAD
+        )
         unknown = Planting(id="p2", area_id="veg", name="Mystery shrub")
         orphan = Planting(id="p3", area_id="gone", name="Tomato", plant="tomato")
         self.assertEqual(build([dead, unknown, orphan]), baseline)
 
     def test_nothing_before_added_on(self):
         tasks = build(
-            [Planting(id="p1", area_id="veg", name="Tomato", plant="tomato",
-                      added_on=date(2027, 6, 1))]
+            [
+                Planting(
+                    id="p1",
+                    area_id="veg",
+                    name="Tomato",
+                    plant="tomato",
+                    added_on=date(2027, 6, 1),
+                )
+            ]
         )
         self.assertEqual([t.kind for t in tasks if t.planting_id], ["harvest"])
 
@@ -151,11 +166,14 @@ class StateTest(unittest.TestCase):
         self.assertEqual(by_kind(done, "sow_indoors")[0].state(date(2027, 3, 10)), DONE)
 
     def test_custom_task(self):
-        custom = CustomTask(id="c1", area_id="veg", title="Fix fence",
-                            due=date(2027, 5, 5))
-        task = [t for t in build(custom_tasks=[custom]) if t.custom][0]
-        self.assertEqual((task.id, task.start, task.end),
-                         ("custom:c1", date(2027, 5, 5), date(2027, 5, 5)))
+        custom = CustomTask(
+            id="c1", area_id="veg", title="Fix fence", due=date(2027, 5, 5)
+        )
+        task = next(t for t in build(custom_tasks=[custom]) if t.custom)
+        self.assertEqual(
+            (task.id, task.start, task.end),
+            ("custom:c1", date(2027, 5, 5), date(2027, 5, 5)),
+        )
         self.assertEqual(task.state(date(2027, 5, 6)), OVERDUE)
 
 
@@ -179,8 +197,7 @@ class RepeatingTaskTest(unittest.TestCase):
 
     def test_completion_rolls_forward_and_lateness_is_overdue(self):
         done = date(2027, 6, 10)
-        first = self.mows(today=date(2027, 6, 11),
-                          last_done={"area:lawn:mow": done})[0]
+        first = self.mows(today=date(2027, 6, 11), last_done={"area:lawn:mow": done})[0]
         self.assertEqual(first.start, date(2027, 6, 17))
         self.assertEqual(first.state(date(2027, 6, 30)), OVERDUE)
 

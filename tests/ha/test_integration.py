@@ -2,7 +2,8 @@
 
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from custom_components.master_gardener.const import DOMAIN
 
@@ -41,7 +42,11 @@ async def _add_tomato(hass, entry, **extra):
 
 async def _todo_items(hass, entity_id):
     result = await hass.services.async_call(
-        "todo", "get_items", {"entity_id": entity_id}, blocking=True, return_response=True
+        "todo",
+        "get_items",
+        {"entity_id": entity_id},
+        blocking=True,
+        return_response=True,
     )
     return result[entity_id]["items"]
 
@@ -147,7 +152,9 @@ async def test_entities_and_devices(hass, entry):
     _entity_id(hass, entry, "calendar", "calendar")
     _entity_id(hass, entry, "sensor", "tasks_due")
 
-    garden = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, entry.entry_id), entry.entry_id)
+    garden = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, entry.entry_id), entry.entry_id
+    )
     veg = dr.async_get(hass).async_get(_device_id(hass, entry, "veg"))
     assert veg.name == "Vegetable garden"
     assert veg.via_device_id == garden.id
@@ -187,7 +194,10 @@ async def test_planting_calendar_todo_and_death(hass, entry, freezer):
     assert starts["Start Cherokee Purple indoors"] == "2027-02-18"
     assert starts["Plant Cherokee Purple outdoors"] == "2027-04-22"
     assert starts["Harvest Cherokee Purple"] == "2027-07-01"
-    assert hass.states.get(calendar).attributes["message"] == "Start Cherokee Purple indoors"
+    assert (
+        hass.states.get(calendar).attributes["message"]
+        == "Start Cherokee Purple indoors"
+    )
 
     # To-do: sowing is due now; tick it off.
     assert hass.states.get(due).state == "1"
@@ -207,7 +217,9 @@ async def test_planting_calendar_todo_and_death(hass, entry, freezer):
 
     # Feedback: add a problem through the to-do list.
     await hass.services.async_call(
-        "todo", "add_item", {"entity_id": todo, "item": "Bed 3 is full of weeds"},
+        "todo",
+        "add_item",
+        {"entity_id": todo, "item": "Bed 3 is full of weeds"},
         blocking=True,
     )
     await hass.async_block_till_done()
@@ -224,7 +236,9 @@ async def test_planting_calendar_todo_and_death(hass, entry, freezer):
     assert result["status"] == "dead"
     await hass.async_block_till_done()
     assert hass.states.get(plantings).state == "0"
-    assert hass.states.get(plantings).attributes["plantings"][0]["notes"] == "late frost"
+    assert (
+        hass.states.get(plantings).attributes["plantings"][0]["notes"] == "late frost"
+    )
     assert [i["summary"] for i in await _todo_items(hass, todo)] == [
         "Bed 3 is full of weeds"
     ]
@@ -242,22 +256,29 @@ async def test_overdue_after_midnight_and_mowing(hass, entry, freezer):
     entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
     assert hass.states.get(overdue).state == "1"
-    assert hass.states.get(_entity_id(hass, entry, "sensor", "tasks_overdue")).state == "1"
+    assert (
+        hass.states.get(_entity_id(hass, entry, "sensor", "tasks_overdue")).state == "1"
+    )
 
     # Mowing: one live item in season; ticking it rolls it a week forward.
     freezer.move_to("2027-06-10 12:00:00+00:00")
     entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
     lawn = _entity_id(hass, entry, "todo", "todo", "lawn")
-    mows = [i for i in await _todo_items(hass, lawn) if i["summary"] == "Mow Front lawn"]
+    mows = [
+        i for i in await _todo_items(hass, lawn) if i["summary"] == "Mow Front lawn"
+    ]
     assert len(mows) == 1
     await hass.services.async_call(
-        "todo", "update_item",
+        "todo",
+        "update_item",
         {"entity_id": lawn, "item": mows[0]["uid"], "status": "completed"},
         blocking=True,
     )
     await hass.async_block_till_done()
-    assert not [i for i in await _todo_items(hass, lawn) if i["summary"] == "Mow Front lawn"]
+    assert not [
+        i for i in await _todo_items(hass, lawn) if i["summary"] == "Mow Front lawn"
+    ]
     next_task = hass.states.get(_entity_id(hass, entry, "sensor", "next_task", "lawn"))
     assert next_task.state == "Mow Front lawn"
     assert next_task.attributes["start"] == "2027-06-17"
@@ -277,7 +298,9 @@ async def test_state_survives_reload(hass, entry, freezer):
 
 async def test_service_rejects_non_area_device(hass, entry):
     await _setup(hass, entry)
-    garden = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, entry.entry_id), entry.entry_id)
+    garden = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, entry.entry_id), entry.entry_id
+    )
     import pytest
     from homeassistant.exceptions import ServiceValidationError
 

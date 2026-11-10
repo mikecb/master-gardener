@@ -8,7 +8,6 @@ from typing import Any
 
 import aiohttp
 import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -73,7 +72,9 @@ def _site_schema(last_frost: str, first_frost: str) -> vol.Schema:
     year = date.today().year
     return vol.Schema(
         {
-            vol.Required(CONF_LAST_FROST, default=f"{year}-{last_frost}"): DateSelector(),
+            vol.Required(
+                CONF_LAST_FROST, default=f"{year}-{last_frost}"
+            ): DateSelector(),
             vol.Required(
                 CONF_FIRST_FROST, default=f"{year}-{first_frost}"
             ): DateSelector(),
@@ -180,7 +181,9 @@ class SiteOptionsFlow(OptionsFlow):
         current = {**self.config_entry.data, **self.config_entry.options}
         return self.async_show_form(
             step_id="init",
-            data_schema=_site_schema(current[CONF_LAST_FROST], current[CONF_FIRST_FROST]),
+            data_schema=_site_schema(
+                current[CONF_LAST_FROST], current[CONF_FIRST_FROST]
+            ),
             errors=errors,
         )
 

@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # New Home Assistant test harness and linter versions arrive as pull
+  # requests, so they have to pass CI before they are used.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
