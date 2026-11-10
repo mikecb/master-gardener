@@ -30,7 +30,9 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 
 ### Data model
 
-- **Site**: average last spring frost and first autumn frost. Everything is
+- **Site**: ZIP code, the USDA hardiness zone looked up from it, and the
+  average last spring frost and first autumn frost (estimated from the zone in
+  `engine/climate.py`, correctable by the user). Everything is
   anchored to these two dates, never to calendar months, so the catalog is not
   tied to one climate.
 - **Area** (config subentry, shown as a device): name, style, light, size,
@@ -78,5 +80,9 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 - The catalog is small (about 40 entries, many of them generic types such as
   "deciduous tree" or "herbaceous perennial"). Unknown plants are tracked but
   get no automatic tasks.
-- Frost dates are entered by hand.
+- US only: the site is located by ZIP code. Frost dates are estimated from the
+  hardiness zone, which measures winter cold rather than frost timing, so they
+  can be a week or two off until corrected by hand. Phase 3 replaces the
+  estimate with station frost normals.
+- The ZIP code cannot be changed after setup; only the frost dates can.
 - Overdue feedback creates a task; it does not yet change the schedule.

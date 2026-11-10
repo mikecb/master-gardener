@@ -10,6 +10,7 @@ sys.path.insert(
 )
 
 from engine.catalog import Catalog  # noqa: E402
+from engine.climate import frost_dates_for_zone  # noqa: E402
 from engine.models import (  # noqa: E402
     DEAD,
     DONE,
@@ -73,6 +74,25 @@ class CatalogTest(unittest.TestCase):
         self.assertEqual(CATALOG.match("japanese maple"), "japanese_maple")
         self.assertEqual(CATALOG.match("Hosta"), "perennial")
         self.assertIsNone(CATALOG.match("unobtainium"))
+
+
+class ClimateTest(unittest.TestCase):
+    def test_frost_dates_from_zone(self):
+        self.assertEqual(frost_dates_for_zone("7a"), ("04-10", "10-25"))
+        self.assertEqual(frost_dates_for_zone("7b"), ("04-05", "10-30"))
+        self.assertEqual(frost_dates_for_zone("7"), ("04-10", "10-25"))
+        self.assertEqual(frost_dates_for_zone("13b"), frost_dates_for_zone("11b"))
+
+    def test_every_zone_has_spring_before_autumn(self):
+        for number in range(1, 14):
+            for half in "ab":
+                last, first = frost_dates_for_zone(f"{number}{half}")
+                self.assertLess(last, first)
+
+    def test_rejects_nonsense(self):
+        for bad in ("", "0a", "14a", "7c", "warm"):
+            with self.assertRaises(ValueError):
+                frost_dates_for_zone(bad)
 
 
 class VegetableCalendarTest(unittest.TestCase):

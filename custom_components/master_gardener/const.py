@@ -4,6 +4,8 @@ DOMAIN = "master_gardener"
 
 SUBENTRY_AREA = "area"
 
+CONF_ZIP_CODE = "zip_code"
+CONF_ZONE = "zone"
 CONF_LAST_FROST = "last_frost"
 CONF_FIRST_FROST = "first_frost"
 

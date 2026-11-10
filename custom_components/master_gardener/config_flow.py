@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any
 
+import aiohttp
 import voluptuous as vol
 
 from homeassistant.config_entries import (
@@ -15,7 +17,8 @@ from homeassistant.config_entries import (
     OptionsFlow,
     SubentryFlowResult,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     DateSelector,
     NumberSelector,
@@ -38,14 +41,32 @@ from .const import (
     CONF_NAME,
     CONF_SIZE_SQFT,
     CONF_STYLE,
+    CONF_ZIP_CODE,
+    CONF_ZONE,
     DOMAIN,
     LIGHTS,
     STYLES,
     SUBENTRY_AREA,
 )
+from .engine.climate import frost_dates_for_zone
 
-DEFAULT_LAST_FROST = "04-15"
-DEFAULT_FIRST_FROST = "10-25"
+# Public USDA Plant Hardiness Zone Map data, keyed by ZIP code.
+ZONE_URL = "https://phzmapi.org/{zip_code}.json"
+
+
+async def _lookup_zone(hass: HomeAssistant, zip_code: str) -> str:
+    """Return the hardiness zone ("7a") for a US ZIP code.
+
+    Raises LookupError for a ZIP code the map does not cover.
+    """
+    session = async_get_clientsession(hass)
+    async with session.get(
+        ZONE_URL.format(zip_code=zip_code), timeout=aiohttp.ClientTimeout(total=15)
+    ) as response:
+        if response.status == 404:
+            raise LookupError(zip_code)
+        response.raise_for_status()
+        return (await response.json(content_type=None))["zone"]
 
 
 def _site_schema(last_frost: str, first_frost: str) -> vol.Schema:
@@ -77,18 +98,59 @@ def _site_errors(data: dict[str, str]) -> dict[str, str]:
 class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    def __init__(self) -> None:
+        self._zip_code = ""
+        self._zone = ""
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Ask for the ZIP code and look up its hardiness zone."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            zip_code = user_input[CONF_ZIP_CODE].strip()[:5]
+            if not re.fullmatch(r"\d{5}", zip_code):
+                errors[CONF_ZIP_CODE] = "invalid_zip"
+            else:
+                try:
+                    self._zone = await _lookup_zone(self.hass, zip_code)
+                    frost_dates_for_zone(self._zone)
+                except LookupError:
+                    errors[CONF_ZIP_CODE] = "unknown_zip"
+                except (aiohttp.ClientError, TimeoutError, ValueError):
+                    errors["base"] = "cannot_connect"
+                else:
+                    self._zip_code = zip_code
+                    return await self.async_step_frost()
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema({vol.Required(CONF_ZIP_CODE): TextSelector()}), user_input
+            ),
+            errors=errors,
+        )
+
+    async def async_step_frost(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show the frost dates estimated from the zone; the user may correct them."""
         errors: dict[str, str] = {}
         if user_input is not None:
             data = _site_data(user_input)
             errors = _site_errors(data)
             if not errors:
-                return self.async_create_entry(title="Master Gardener", data=data)
+                return self.async_create_entry(
+                    title="Master Gardener",
+                    data={
+                        CONF_ZIP_CODE: self._zip_code,
+                        CONF_ZONE: self._zone,
+                        **data,
+                    },
+                )
         return self.async_show_form(
-            step_id="user",
-            data_schema=_site_schema(DEFAULT_LAST_FROST, DEFAULT_FIRST_FROST),
+            step_id="frost",
+            data_schema=_site_schema(*frost_dates_for_zone(self._zone)),
+            description_placeholders={"zone": self._zone, "zip_code": self._zip_code},
             errors=errors,
         )
 

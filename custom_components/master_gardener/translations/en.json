@@ -2,8 +2,15 @@
   "config": {
     "step": {
       "user": {
+        "title": "Where is your garden?",
+        "description": "Your ZIP code is used to look up your USDA hardiness zone (from phzmapi.org) and estimate your frost dates.",
+        "data": {
+          "zip_code": "ZIP code"
+        }
+      },
+      "frost": {
         "title": "Your climate",
-        "description": "Every sowing, pruning and harvest date is counted from your frost dates. Only the month and day are used. Look up the averages for your location; you can change them later.",
+        "description": "ZIP code {zip_code} is in hardiness zone {zone}. These are typical frost dates for that zone, and every sowing, pruning and harvest date is counted from them. Correct them if you know your local averages; only the month and day are used.",
         "data": {
           "last_frost": "Average last spring frost",
           "first_frost": "Average first autumn frost"
@@ -11,6 +18,9 @@
       }
     },
     "error": {
+      "invalid_zip": "Enter a 5-digit US ZIP code.",
+      "unknown_zip": "No hardiness zone found for this ZIP code.",
+      "cannot_connect": "The zone lookup failed. Check your connection and try again.",
       "frost_order": "The last spring frost must come before the first autumn frost."
     },
     "abort": {

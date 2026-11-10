@@ -46,22 +46,46 @@ async def _todo_items(hass, entity_id):
     return result[entity_id]["items"]
 
 
-async def test_config_flow(hass):
+async def test_config_flow(hass, aioclient_mock):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+    flow_id = result["flow_id"]
+    configure = hass.config_entries.flow.async_configure
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"last_frost": "2026-10-25", "first_frost": "2026-04-15"}
+    result = await configure(flow_id, {"zip_code": "2290"})
+    assert result["errors"] == {"zip_code": "invalid_zip"}
+
+    aioclient_mock.get("https://phzmapi.org/00000.json", status=404)
+    result = await configure(flow_id, {"zip_code": "00000"})
+    assert result["errors"] == {"zip_code": "unknown_zip"}
+
+    aioclient_mock.get("https://phzmapi.org/22901.json", status=500)
+    result = await configure(flow_id, {"zip_code": "22901"})
+    assert result["errors"] == {"base": "cannot_connect"}
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get("https://phzmapi.org/22901.json", json={"zone": "7b"})
+    result = await configure(flow_id, {"zip_code": " 22901 "})
+    assert result["step_id"] == "frost"
+    assert result["description_placeholders"] == {"zone": "7b", "zip_code": "22901"}
+
+    result = await configure(
+        flow_id, {"last_frost": "2026-10-25", "first_frost": "2026-04-15"}
     )
     assert result["errors"] == {"base": "frost_order"}
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"last_frost": "2026-04-15", "first_frost": "2026-10-25"}
-    )
+    # Accept the dates estimated for zone 7b.
+    result = await configure(flow_id, {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["data"] == {"last_frost": "04-15", "first_frost": "10-25"}
+    assert result["data"] == {
+        "zip_code": "22901",
+        "zone": "7b",
+        "last_frost": "04-05",
+        "first_frost": "10-30",
+    }
 
 
 async def test_options_flow_changes_frost_dates(hass, entry):
