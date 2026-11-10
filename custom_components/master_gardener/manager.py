@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import date, datetime, timedelta
 from uuid import uuid4
 
@@ -29,12 +30,14 @@ from .const import (
     CONF_FIRST_FROST,
     CONF_LAST_FROST,
     CONF_MOISTURE_SENSORS,
+    CONF_SEED_INVENTORY,
     CONF_STYLE,
     CONF_WEATHER_ENTITY,
     CONF_ZONE,
     DOMAIN,
     LOOKAHEAD_DAYS,
     LOOKBACK_DAYS,
+    SEED_INVENTORY_DOMAIN,
     SUBENTRY_AREA,
 )
 from .engine.care import (
@@ -72,6 +75,7 @@ from .engine.plan import (
 )
 from .engine.planting_rules import care_profile
 from .engine.schedule import IN_GROUND_KINDS, build_tasks
+from .engine.seeds import SeedItem, apply_seed, parse_items
 from .engine.weather import (
     Alert,
     DayForecast,
@@ -139,6 +143,8 @@ class GardenManager:
         self._area_since: dict[str, date] = {}
         self._snoozed: dict[str, datetime] = {}
         self._care_on: dict[tuple[str, str], bool] = {}
+        self.seeds: list[SeedItem] | None = None  # None: not read (yet)
+        self._seed_records: dict[str, dict | None] = {}
         self.forecast: list[DayForecast] = []
         self._forecast_at: datetime | None = None
         self._listeners: list[CALLBACK_TYPE] = []
@@ -225,6 +231,10 @@ class GardenManager:
         )
         tasks += [t for t in self._plan_tasks() if t.end >= start and t.start <= end]
         tasks.sort(key=lambda t: (t.start, t.end, t.title))
+        if self.seeds is not None:
+            tasks = apply_seed(
+                tasks, self.plantings, self.seeds, self._completions, self.today
+            )
         return tasks
 
     def tasks(self, area_id: str | None = None) -> list[Task]:
@@ -523,6 +533,58 @@ class GardenManager:
         self._changed()
         return source
 
+    # --- seed inventory ----------------------------------------------------
+
+    @property
+    def seed_inventory(self) -> str | None:
+        """The Simple Inventory sensor whose inventory holds the seed."""
+        return self.entry.options.get(CONF_SEED_INVENTORY)
+
+    async def async_update_seeds(self, *_: object) -> None:
+        """Read the seed inventory; seed tasks follow what is in it."""
+        seeds = await self._async_fetch_seeds()
+        if seeds is None and self.seeds is not None:
+            return  # keep the last good reading through a hiccup
+        if seeds is not None:
+            seeds = await self._async_match_seeds(seeds)
+        if seeds != self.seeds:
+            self.seeds = seeds
+            self.async_refresh()
+
+    async def _async_match_seeds(self, seeds: list[SeedItem]) -> list[SeedItem]:
+        """Each seed with the catalogue plant its name is, if any."""
+        if not self.plants.ready:
+            return seeds
+        for name in {s.name for s in seeds} - set(self._seed_records):
+            record, _ = await self.plants.async_resolve(name)
+            self._seed_records[name] = record
+        return [replace(s, record=self._seed_records.get(s.name)) for s in seeds]
+
+    @callback
+    def async_seed_inventory_changed(self, *_: object) -> None:
+        self.entry.async_create_background_task(
+            self.hass, self.async_update_seeds(), "master_gardener seeds"
+        )
+
+    async def _async_fetch_seeds(self) -> list[SeedItem] | None:
+        entity_id = self.seed_inventory
+        state = self.hass.states.get(entity_id) if entity_id else None
+        inventory_id = state.attributes.get("inventory_id") if state else None
+        if not inventory_id:
+            return None
+        try:
+            response = await self.hass.services.async_call(
+                SEED_INVENTORY_DOMAIN,
+                "get_items",
+                {"inventory_id": inventory_id},
+                blocking=True,
+                return_response=True,
+            )
+        except HomeAssistantError as err:
+            _LOGGER.debug("Could not read the seed inventory: %s", err)
+            return None
+        return parse_items(response)
+
     # --- weather -----------------------------------------------------------
 
     @property
@@ -717,6 +779,15 @@ class GardenManager:
             self._changed()
         else:
             self.async_notify()
+        if self.seed_inventory and (changed or not self._seed_records):
+            # Seed names are matched against the catalogue, which may only
+            # just have arrived: match what is held again, or read it now.
+            self._seed_records.clear()
+            if self.seeds is None:
+                await self.async_update_seeds()
+            else:
+                self.seeds = await self._async_match_seeds(self.seeds)
+                self.async_refresh()
         return changed
 
     def set_planting_status(

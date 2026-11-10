@@ -51,6 +51,7 @@ from .const import (
     CONF_LONGITUDE,
     CONF_MOISTURE_SENSORS,
     CONF_NAME,
+    CONF_SEED_INVENTORY,
     CONF_SIZE_SQFT,
     CONF_STYLE,
     CONF_USE_STATION,
@@ -59,6 +60,7 @@ from .const import (
     CONF_ZONE,
     DOMAIN,
     LIGHTS,
+    SEED_INVENTORY_DOMAIN,
     STYLES,
     SUBENTRY_AREA,
     SUBENTRY_MANAGE,
@@ -339,6 +341,8 @@ class SiteOptionsFlow(OptionsFlow):
                 # Empty or 0: no budget, the whole plan is this year.
                 if budget := user_input.get(CONF_ANNUAL_BUDGET):
                     data[CONF_ANNUAL_BUDGET] = budget
+                if seeds := user_input.get(CONF_SEED_INVENTORY):
+                    data[CONF_SEED_INVENTORY] = seeds
                 if normals:
                     data[CONF_FROST_STATION] = normals.as_data()
                 elif CONF_FROST_STATION in current:
@@ -361,6 +365,11 @@ class SiteOptionsFlow(OptionsFlow):
                         unit_of_measurement=self.hass.config.currency,
                     )
                 ),
+                vol.Optional(CONF_SEED_INVENTORY): EntitySelector(
+                    EntitySelectorConfig(
+                        domain="sensor", integration=SEED_INVENTORY_DOMAIN
+                    )
+                ),
             }
         )
         return self.async_show_form(
@@ -369,7 +378,11 @@ class SiteOptionsFlow(OptionsFlow):
                 schema,
                 {
                     key: current.get(key)
-                    for key in (CONF_WEATHER_ENTITY, CONF_ANNUAL_BUDGET)
+                    for key in (
+                        CONF_WEATHER_ENTITY,
+                        CONF_ANNUAL_BUDGET,
+                        CONF_SEED_INVENTORY,
+                    )
                 },
             ),
             description_placeholders={

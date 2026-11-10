@@ -36,12 +36,14 @@
           "first_frost": "Average first autumn frost",
           "weather_entity": "Weather forecast",
           "annual_budget": "Yearly garden budget",
-          "use_station": "Use the weather station's frost dates"
+          "use_station": "Use the weather station's frost dates",
+          "seed_inventory": "Seed inventory"
         },
         "data_description": {
           "weather_entity": "Optional. Its forecast holds off watering when rain is coming and warns when frost or heat threatens what you have planted.",
           "annual_budget": "Optional. What you mean to spend on plants and projects each year. The build plan spreads planned purchases over the years to stay within it. Leave empty for no limit.",
-          "use_station": "Replaces the two dates above with the station's averages."
+          "use_station": "Replaces the two dates above with the station's averages.",
+          "seed_inventory": "Optional. A Simple Inventory inventory that holds your seed (pick its inventory sensor). Each sowing then says what seed you have, and a \"Get seed\" task comes six weeks ahead of any sowing you have no seed for."
         },
         "description": "{station}"
       }

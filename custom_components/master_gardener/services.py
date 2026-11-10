@@ -266,6 +266,30 @@ def _area(manager: GardenManager, area: ConfigSubentry, names: dict[str, str]) -
     return out
 
 
+def _seed_inventory(manager: GardenManager) -> dict:
+    """The seed on hand, when a seed inventory is set up."""
+    if not manager.seed_inventory:
+        return {}
+    today = manager.today
+    return {
+        "seed_inventory": {
+            "entity": manager.seed_inventory,
+            "read": manager.seeds is not None,
+            "seeds": [
+                {
+                    "name": seed.name,
+                    "quantity": seed.quantity,
+                    "unit": seed.unit,
+                    "expiry": seed.expiry.isoformat() if seed.expiry else None,
+                    "expired": bool(seed.expiry and seed.expiry < today),
+                    "plant": seed.record["slug"] if seed.record else None,
+                }
+                for seed in manager.seeds or []
+            ],
+        }
+    }
+
+
 def _frost_source(conf: dict) -> dict:
     """Where the frost dates came from, so advice can say how far to trust them."""
     dates = (conf[CONF_LAST_FROST], conf[CONF_FIRST_FROST])
@@ -344,6 +368,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             },
             "areas": [_area(manager, s, names) for s in manager.area_subentries],
             "budget": _budget(manager),
+            **_seed_inventory(manager),
         }
 
     async def get_plan(call: ServiceCall) -> ServiceResponse:

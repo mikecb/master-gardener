@@ -100,6 +100,28 @@ forecast). The forecast is read every hour, and then:
 Alerts name the plantings at risk. Only plantings that are in the ground
 count: an annual needs a planting date (ticking its **Plant …** task sets it).
 
+## Seed inventory
+
+Master Gardener reads your seed from a
+[Simple Inventory](https://github.com/blaineventurine/simple_inventory)
+inventory rather than keeping its own. Create one for seed (say "Seeds"),
+add each packet as an item named for what it is (`Sungold tomato`,
+`Danvers carrot`), with a quantity and, ideally, an expiry date. Then open
+**Configure** on Master Gardener and pick that inventory's sensor as the
+**Seed inventory**. Then:
+
+- each **Sow …** and **Start … indoors** task says what seed you have for it;
+- where you have none, or only seed past its expiry date, a **Get seed for …**
+  task appears six weeks before the sowing window opens, and goes away as soon
+  as the seed is in the inventory (or when you tick it).
+
+A plain planting such as "Tomato" takes any tomato seed; a named variety such
+as "Cherokee Purple tomato" wants that variety. Seed is matched by its
+catalogue plant when its name is one, otherwise by name (aliases count), so
+`Carrots`, `Danvers carrot` and an item with the alias `carrot` all cover a
+carrot planting. An item with quantity 0 counts as used up. The inventory is
+read again whenever it changes.
+
 ## Build plan and budget
 
 A garden is rarely bought in one go. Record what you mean to add as
@@ -145,7 +167,7 @@ you can give the area's name.
 
 | Action | What it does |
 | --- | --- |
-| `master_gardener.get_garden` | Climate, frost dates, this year's budget, and every area with its style, light, size, character, neighbours, counts, soil state and weather alerts |
+| `master_gardener.get_garden` | Climate, frost dates and where they came from, this year's budget, seed on hand, and every area with its style, light, size, character, neighbours, counts, soil state and weather alerts |
 | `master_gardener.list_tasks` | Tasks due now, or coming up, with their ids |
 | `master_gardener.complete_task` | Record a task as done |
 | `master_gardener.add_task` | A one-off task or a reported problem in an area |

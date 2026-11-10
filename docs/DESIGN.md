@@ -111,6 +111,27 @@ twice-daily or hourly entries into one record per local day, in °C and mm.
 - A forecast that cannot be refreshed for six hours is dropped; the frost and
   heat sensors then read unknown rather than a stale "no risk".
 
+### Seed rules
+
+Seed lives in a Simple Inventory inventory chosen in the options; Master
+Gardener only reads it (`simple_inventory.get_items`), again whenever the
+inventory's sensor changes and once the plant catalogue is ready.
+`engine/seeds.py` then works on the generated tasks:
+
+- Only open sowings count (`sow_indoors`, `direct_sow`, not done, not past),
+  and only for active plantings.
+- A seed item matches a planting by catalogue plant (same plant; or the same
+  species when the planting is not a named variety) or by name: the
+  planting's name or its plant's common name, as a whole word, optionally
+  plural, in the item's name or an alias.
+- Usable seed has a quantity above zero (or none recorded) and no expiry
+  date in the past. It is named in the sowing task's detail.
+- With none usable, a "Get seed" task runs from six weeks before the sowing
+  window opens to the day before, saying whether there is no seed or only
+  expired seed. It is completed like any task, and disappears once seed is
+  entered. Without a seed inventory chosen there are no seed tasks at all.
+- A failed read keeps the last good one; no read yet means no seed tasks.
+
 ### Build plan rules
 
 The plan, like the calendar, is never stored: `engine/plan.py` works it out
@@ -170,15 +191,16 @@ plantings are not offered: they are history.
    an estimated cost, and the gardener skill. An agent answers "what do I buy
    for the cottage garden front steps" by reading the area and its neighbours,
    searching the catalogue and saving proposals. Built too: frost dates from
-   the nearest weather station's climate normals. Still to do: more public
-   data for the property (soil survey, sun path) and seeds on hand.
+   the nearest weather station's climate normals, and seed on hand from a
+   Simple Inventory inventory. Still to do: more public data for the
+   property (soil survey, sun path).
 4. **Multi-year build plan and budget (mostly built).** Built: planned
    plantings and projects with cost, priority and a structural tier (trees
    and shrubs, then hardscape, then perennials and small plants); the engine
    orders them across years under an annual budget, and this year's
    purchases appear as to-do items that record what was spent. Any change
-   to the wishlist, spending or budget reshuffles the plan. Still to do:
-   seed and plant inventory, and replacing a dead planting through the plan
+   to the wishlist, spending or budget reshuffles the plan. Seed inventory:
+   see phase 3. Still to do: replacing a dead planting through the plan
    (today the agent proposes the replacement).
 5. **Adaptive maintenance.** Repeated "overdue" feedback tightens an interval;
    repeated early completion loosens it. Care profiles for shrubs and vines.

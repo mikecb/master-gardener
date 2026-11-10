@@ -30,6 +30,9 @@ CONF_FEED_BELOW = "feed_below"
 
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_ANNUAL_BUDGET = "annual_budget"
+# A Simple Inventory sensor for the inventory that holds the seed.
+CONF_SEED_INVENTORY = "seed_inventory"
+SEED_INVENTORY_DOMAIN = "simple_inventory"
 
 CARE_WATER = "water"
 CARE_FEED = "feed"
