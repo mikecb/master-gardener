@@ -28,6 +28,7 @@ from .const import (
     CONF_CHARACTER,
     CONF_CONDUCTIVITY_SENSORS,
     CONF_FIRST_FROST,
+    CONF_FROST_STATION,
     CONF_LAST_FROST,
     CONF_LIGHT,
     CONF_MOISTURE_SENSORS,
@@ -37,6 +38,7 @@ from .const import (
     CONF_ZONE,
     DOMAIN,
 )
+from .engine.climate import frost_dates_for_zone
 from .engine.models import (
     ACTIVE,
     DONE,
@@ -264,6 +266,20 @@ def _area(manager: GardenManager, area: ConfigSubentry, names: dict[str, str]) -
     return out
 
 
+def _frost_source(conf: dict) -> dict:
+    """Where the frost dates came from, so advice can say how far to trust them."""
+    dates = (conf[CONF_LAST_FROST], conf[CONF_FIRST_FROST])
+    station = conf.get(CONF_FROST_STATION)
+    if station and (station[CONF_LAST_FROST], station[CONF_FIRST_FROST]) == dates:
+        return {"source": "weather_station", "station": station}
+    try:
+        estimated = conf.get(CONF_ZONE) and frost_dates_for_zone(conf[CONF_ZONE])
+    except ValueError:
+        estimated = None
+    source = "hardiness_zone_estimate" if estimated == dates else "entered"
+    return {"source": source, "nearest_station": station}
+
+
 def _plan_year(year: PlanYear, names: dict[str, str]) -> dict:
     return {
         "year": year.year,
@@ -315,6 +331,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 "hardiness_zone": conf.get(CONF_ZONE),
                 "last_spring_frost": conf[CONF_LAST_FROST],
                 "first_autumn_frost": conf[CONF_FIRST_FROST],
+                "frost_dates_from": _frost_source(conf),
             },
             "plant_catalogue": {
                 "ready": manager.plants.ready,

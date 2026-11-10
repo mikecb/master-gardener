@@ -78,7 +78,10 @@ async def test_config_flow(hass, aioclient_mock):
     aioclient_mock.get("https://phzmapi.org/22901.json", json={"zone": "7b"})
     result = await configure(flow_id, {"zip_code": " 22901 "})
     assert result["step_id"] == "frost"
-    assert result["description_placeholders"] == {"zone": "7b", "zip_code": "22901"}
+    # The map gave no location, so there is no station to ask.
+    assert result["description_placeholders"]["source"].startswith(
+        "ZIP code 22901 is in hardiness zone 7b. No nearby weather station"
+    )
 
     result = await configure(
         flow_id, {"last_frost": "2026-10-25", "first_frost": "2026-04-15"}

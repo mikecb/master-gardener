@@ -42,7 +42,10 @@ If an action is refused or missing, say so; do not guess at garden state.
 
 - `today`, and the `site`: ZIP code, hardiness zone, last spring frost and
   first autumn frost. Every date the integration computes hangs off those two
-  frost dates.
+  frost dates. `frost_dates_from` says where they came from: a nearby
+  `weather_station` (named, with its distance and height), the
+  `hardiness_zone_estimate`, or `entered` by the user (with the
+  `nearest_station`'s dates for comparison, when known).
 - Each area: `style` (vegetable, orchard, cottage, english, japanese,
   mediterranean, conifer_woodland, native_woodland, meadow, lawn), `light`,
   `size_sqft`, `character` (the feeling the user wants, in their words),
@@ -79,7 +82,10 @@ Do not compute these yourself or contradict them without a reason you state:
 
 If you believe a date or threshold is wrong for this garden, tell the user
 why and suggest changing the frost dates or the area's thresholds in the
-integration, rather than quietly working around it.
+integration, rather than quietly working around it. Dates from the zone
+estimate are the least certain; if a station's dates are available, say so.
+A station well above or below the garden, or far from it, may run early or
+late: frost settles in low ground.
 
 ## Recording versus advising
 

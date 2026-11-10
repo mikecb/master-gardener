@@ -10,7 +10,7 @@
       },
       "frost": {
         "title": "Your climate",
-        "description": "ZIP code {zip_code} is in hardiness zone {zone}. These are typical frost dates for that zone, and every sowing, pruning and harvest date is counted from them. Correct them if you know your local averages; only the month and day are used.",
+        "description": "{source} Every sowing, pruning and harvest date is counted from these two dates. Correct them if you know your local averages; only the month and day are used.",
         "data": {
           "last_frost": "Average last spring frost",
           "first_frost": "Average first autumn frost"
@@ -35,12 +35,15 @@
           "last_frost": "Average last spring frost",
           "first_frost": "Average first autumn frost",
           "weather_entity": "Weather forecast",
-          "annual_budget": "Yearly garden budget"
+          "annual_budget": "Yearly garden budget",
+          "use_station": "Use the weather station's frost dates"
         },
         "data_description": {
           "weather_entity": "Optional. Its forecast holds off watering when rain is coming and warns when frost or heat threatens what you have planted.",
-          "annual_budget": "Optional. What you mean to spend on plants and projects each year. The build plan spreads planned purchases over the years to stay within it. Leave empty for no limit."
-        }
+          "annual_budget": "Optional. What you mean to spend on plants and projects each year. The build plan spreads planned purchases over the years to stay within it. Leave empty for no limit.",
+          "use_station": "Replaces the two dates above with the station's averages."
+        },
+        "description": "{station}"
       }
     },
     "error": {

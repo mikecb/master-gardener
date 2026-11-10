@@ -35,9 +35,13 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 
 ### Data model
 
-- **Site**: ZIP code, the USDA hardiness zone looked up from it, and the
-  average last spring frost and first autumn frost (estimated from the zone in
-  `engine/climate.py`, correctable by the user). Everything is
+- **Site**: ZIP code, the USDA hardiness zone and location looked up from
+  it, and the average last spring frost and first autumn frost: from the
+  nearest NOAA station's 1991-2020 normals (`engine/frost_normals.py`), else
+  estimated from the zone (`engine/climate.py`), always correctable by the
+  user. The station consulted is kept with the entry, and `get_garden`
+  reports whether the dates in use are the station's, the zone estimate's,
+  or entered by hand. Everything is
   anchored to these two dates, never to calendar months, so the catalog is not
   tied to one climate.
 - **Area** (config subentry, shown as a device): name, style, light, size,
@@ -165,9 +169,9 @@ plantings are not offered: they are history.
    area names in place of device ids), `proposed` plantings with a reason and
    an estimated cost, and the gardener skill. An agent answers "what do I buy
    for the cottage garden front steps" by reading the area and its neighbours,
-   searching the catalogue and saving proposals. Still to do: pull public data
-   for the property (frost normals replacing the zone estimate, soil survey,
-   sun path) and expose seeds on hand.
+   searching the catalogue and saving proposals. Built too: frost dates from
+   the nearest weather station's climate normals. Still to do: more public
+   data for the property (soil survey, sun path) and seeds on hand.
 4. **Multi-year build plan and budget (mostly built).** Built: planned
    plantings and projects with cost, priority and a structural tier (trees
    and shrubs, then hardscape, then perennials and small plants); the engine
@@ -191,10 +195,12 @@ plantings are not offered: they are history.
 - For seedlings started indoors the database gives the sowing time only;
   the plant-out date is derived from frost tolerance.
 - Its `spring` and `fall` planting anchors are read as the frost dates.
-- US only: the site is located by ZIP code. Frost dates are estimated from the
-  hardiness zone, which measures winter cold rather than frost timing, so they
-  can be a week or two off until corrected by hand. Phase 3 replaces the
-  estimate with station frost normals.
+- US only: the site is located by ZIP code, and station normals are NOAA's.
+- Station frost dates are the nearest station's, up to about 110 km away,
+  chosen by distance alone. Frost pools in hollows and lifts on slopes, so
+  stations a few miles apart can differ by two weeks; the form names the
+  station, its distance and height, so the user can judge. Where no station
+  qualifies the zone estimate is used, which can be a week or two off.
 - The ZIP code cannot be changed after setup; only the frost dates can.
 - Overdue feedback creates a task; it does not yet change the schedule.
 - The budget is one amount for every year, in Home Assistant's currency; it

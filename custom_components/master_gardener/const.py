@@ -11,6 +11,11 @@ CONF_ZIP_CODE = "zip_code"
 CONF_ZONE = "zone"
 CONF_LAST_FROST = "last_frost"
 CONF_FIRST_FROST = "first_frost"
+CONF_LATITUDE = "latitude"
+CONF_LONGITUDE = "longitude"
+# The weather station the frost dates were last looked up from.
+CONF_FROST_STATION = "frost_station"
+CONF_USE_STATION = "use_station"
 
 CONF_NAME = "name"
 CONF_STYLE = "style"
