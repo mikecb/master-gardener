@@ -21,6 +21,8 @@ custom_components/master_gardener/
     plantdb.py          OpenPlantDB CSV -> local SQLite, lookup and search
     planting_rules.py   one plant record -> sow/plant/harvest rules + care profile
     schedule.py         areas + plantings + frost dates -> dated tasks
+    care.py             soil readings -> needs water / needs fertilizer
+    weather.py          forecast -> rain hold-off, frost and heat alerts
   manager.py     state, persistence (.storage), cache, change notifications
   config_flow.py property frost dates; one config subentry per garden area
   calendar.py / todo.py / sensor.py / services.py   thin HA surface
@@ -72,17 +74,41 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 - Ticking a care task hides it for 12 hours (water) or 14 days (fertilizer);
   the binary sensor keeps reporting what the soil says.
 
+### Weather rules
+
+The forecast comes from a weather entity chosen in the options and is read
+hourly through `weather.get_forecasts`. `engine/weather.py` folds daily,
+twice-daily or hourly entries into one record per local day, in °C and mm.
+
+- Watering waits when at least 5 mm of rain is forecast for today or tomorrow
+  (counting only rain at least 50% likely; a forecast with no amounts must be
+  70% sure). Soil below 60% of its threshold is watered regardless. While
+  waiting, "needs water" is off, so an irrigation automation waits too.
+- Frost and heat are looked for today and two days ahead, per area, and only
+  for plantings in the ground: active, and for an annual, planted within the
+  last year. Perennials and plants the catalogue does not know are assumed
+  planted.
+- Frost: lows at or below 2 °C threaten `tender` plants, -2 °C `half-hardy`
+  ones (the catalogue's `frost_tolerance`). Alerts run from eight weeks before
+  the average last frost to four weeks after the average first; in deep winter
+  a nightly alert would be noise.
+- Heat: highs of 30 °C or more threaten cool-season crops, 35 °C or more
+  anything planted in the last six weeks.
+- Ticking a frost task hides it for a day, a heat task for three.
+- A forecast that cannot be refreshed for six hours is dropped; the frost and
+  heat sensors then read unknown rather than a stale "no risk".
+
 ## Roadmap
 
 1. **Areas + calendar (built).** Areas, plantings, frost-anchored task
    calendar, per-area to-do lists, due/overdue sensors, feedback by adding
    tasks and reporting deaths.
-2. **Sensor-driven care (partly built).** Built: each area can name soil
+2. **Sensor-driven care (mostly built).** Built: each area can name soil
    moisture and conductivity sensors; `engine/care.py` turns the readings into
    "needs water" and "needs fertilizer" advice, shown as binary sensors and as
-   to-do items. Still to do: hold off watering when rain is forecast, frost and
-   heat warnings for tender plantings, and measured light hours replacing the
-   hand-entered light level.
+   to-do items. `engine/weather.py` holds off watering when rain is forecast
+   and raises frost and heat alerts for the plantings at risk. Still to do:
+   measured light hours replacing the hand-entered light level.
 3. **Advisor (built) and site knowledge.** Built: agent-facing actions
    (`get_garden`, `list_tasks`, `complete_task`, filtered `search_plants`,
    area names in place of device ids), `proposed` plantings with a reason and
@@ -117,3 +143,6 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
   estimate with station frost normals.
 - The ZIP code cannot be changed after setup; only the frost dates can.
 - Overdue feedback creates a task; it does not yet change the schedule.
+- Frost and heat alerts trust the forecast's daily low and high as given, and
+  the catalogue's frost tolerance; a plant with no catalogue record gets no
+  frost alert.

@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from uuid import uuid4
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import DistanceConverter, TemperatureConverter
+from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 
 from .const import (
     CARE_FEED,
+    CARE_FROST,
+    CARE_HEAT,
     CARE_WATER,
     CONF_CONDUCTIVITY_SENSORS,
     CONF_DRY_BELOW,
@@ -23,6 +29,7 @@ from .const import (
     CONF_LAST_FROST,
     CONF_MOISTURE_SENSORS,
     CONF_STYLE,
+    CONF_WEATHER_ENTITY,
     CONF_ZONE,
     DOMAIN,
     LOOKAHEAD_DAYS,
@@ -49,14 +56,38 @@ from .engine.models import (
 )
 from .engine.planting_rules import care_profile
 from .engine.schedule import IN_GROUND_KINDS, build_tasks
+from .engine.weather import (
+    Alert,
+    DayForecast,
+    daily,
+    frost_alert,
+    heat_alert,
+    rain_note,
+)
 from .plant_store import PlantStore
+
+_LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
 
 # After a care task is ticked off it stays away this long, giving the water
-# or fertilizer time to show up in the readings.
-CARE_SNOOZE = {CARE_WATER: timedelta(hours=12), CARE_FEED: timedelta(days=14)}
-CARE_TITLES = {CARE_WATER: "Water {name}", CARE_FEED: "Fertilize {name}"}
+# or fertilizer time to show up in the readings, or the cold or heat to pass.
+CARE_SNOOZE = {
+    CARE_WATER: timedelta(hours=12),
+    CARE_FEED: timedelta(days=14),
+    CARE_FROST: timedelta(days=1),
+    CARE_HEAT: timedelta(days=3),
+}
+CARE_TITLES = {
+    CARE_WATER: "Water {name}",
+    CARE_FEED: "Fertilize {name}",
+    CARE_FROST: "Protect {name} from frost",
+    CARE_HEAT: "Shield {name} from heat",
+}
+# The forecasts a weather entity may offer, by its feature flag, best first.
+FORECAST_TYPES = ((1, "daily"), (4, "twice_daily"), (2, "hourly"))
+# A forecast that could not be refreshed for this long is no longer trusted.
+FORECAST_MAX_AGE = timedelta(hours=6)
 # Conductivity is judged in µS/cm.
 UNIT_FACTORS = {"mS/cm": 1000, "S/cm": 1_000_000}
 
@@ -91,6 +122,8 @@ class GardenManager:
         self._area_since: dict[str, date] = {}
         self._snoozed: dict[str, datetime] = {}
         self._care_on: dict[tuple[str, str], bool] = {}
+        self.forecast: list[DayForecast] = []
+        self._forecast_at: datetime | None = None
         self._listeners: list[CALLBACK_TYPE] = []
         self._cache: tuple[date, list[Task]] | None = None
 
@@ -213,6 +246,7 @@ class GardenManager:
                 moisture,
                 self.dry_below(area),
                 self._care_on.get((key, CARE_WATER), False),
+                rain_note(self.forecast, self.today, imperial=self.imperial),
             ),
             CARE_FEED: feed_advice(
                 conductivity,
@@ -243,16 +277,25 @@ class GardenManager:
         return values
 
     def _care_tasks(self) -> list[Task]:
-        """A due-today task for each area that needs water or fertilizer now."""
+        """A task for each area that needs water, feeding or protecting now."""
         now = dt_util.utcnow()
         today = self.today
         tasks = []
         for area in self.area_subentries:
-            for kind, advice in self.care_advice(area).items():
+            # Soil care is due today; protection is due by the day it turns.
+            wanted = [
+                (kind, today, advice.reason)
+                for kind, advice in self.care_advice(area).items()
+                if advice and advice.needed
+            ]
+            wanted += [
+                (kind, alert.day, alert.reason)
+                for kind, alert in self.weather_alerts(area).items()
+                if alert
+            ]
+            for kind, due, reason in wanted:
                 task_id = f"care:{kind}:{area.subentry_id}"
                 snoozed_until = self._snoozed.get(task_id)
-                if not advice or not advice.needed:
-                    continue
                 if snoozed_until and snoozed_until > now:
                     continue
                 tasks.append(
@@ -262,11 +305,110 @@ class GardenManager:
                         title=CARE_TITLES[kind].format(name=area.title),
                         kind=kind,
                         start=today,
-                        end=today,
-                        detail=advice.reason,
+                        end=due,
+                        detail=reason,
                     )
                 )
         return tasks
+
+    # --- weather -----------------------------------------------------------
+
+    @property
+    def weather_entity(self) -> str | None:
+        """The weather entity whose forecast is followed, if one was chosen."""
+        return self.entry.options.get(CONF_WEATHER_ENTITY)
+
+    @property
+    def imperial(self) -> bool:
+        return self.hass.config.units is US_CUSTOMARY_SYSTEM
+
+    def weather_alerts(self, area: ConfigSubentry) -> dict[str, Alert | None]:
+        """Frost and heat alerts for the plantings in an area."""
+        today = self.today
+        plantings = [
+            p for p in self.plantings.values() if p.area_id == area.subentry_id
+        ]
+        return {
+            CARE_FROST: frost_alert(
+                self.forecast,
+                plantings,
+                site=self.site,
+                today=today,
+                imperial=self.imperial,
+            ),
+            CARE_HEAT: heat_alert(
+                self.forecast, plantings, today=today, imperial=self.imperial
+            ),
+        }
+
+    async def async_update_forecast(self, *_: object) -> None:
+        """Read the forecast from the weather entity and tell the entities."""
+        entries = await self._async_fetch_forecast()
+        now = dt_util.utcnow()
+        if entries is not None:
+            self.forecast = daily(entries)
+            self._forecast_at = now
+        elif self._forecast_at and now - self._forecast_at > FORECAST_MAX_AGE:
+            self.forecast = []
+            self._forecast_at = None
+        else:
+            return
+        self.async_notify()
+
+    @callback
+    def async_weather_changed(self, *_: object) -> None:
+        """The weather entity came up or changed: fetch if there is no forecast."""
+        if self._forecast_at is None:
+            self.entry.async_create_background_task(
+                self.hass, self.async_update_forecast(), "master_gardener forecast"
+            )
+
+    async def _async_fetch_forecast(self) -> list[dict] | None:
+        """Forecast entries by local day, in °C and mm; None if not available."""
+        entity_id = self.weather_entity
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        features = state.attributes.get("supported_features") or 0
+        kind = next((name for flag, name in FORECAST_TYPES if features & flag), None)
+        if kind is None:
+            return None
+        try:
+            response = await self.hass.services.async_call(
+                "weather",
+                "get_forecasts",
+                {"entity_id": entity_id, "type": kind},
+                blocking=True,
+                return_response=True,
+            )
+        except HomeAssistantError as err:
+            _LOGGER.debug("No forecast from %s: %s", entity_id, err)
+            return None
+        temperature_unit = state.attributes.get(
+            "temperature_unit", UnitOfTemperature.CELSIUS
+        )
+        rain_unit = state.attributes.get("precipitation_unit", "mm")
+        entries = []
+        for item in (response or {}).get(entity_id, {}).get("forecast") or []:
+            when = dt_util.parse_datetime(str(item.get("datetime")))
+            if when is None:
+                continue
+            entry: dict = {
+                "day": dt_util.as_local(when).date(),
+                "is_daytime": item.get("is_daytime"),
+                "precipitation_probability": item.get("precipitation_probability"),
+            }
+            for key in ("temperature", "templow"):
+                if item.get(key) is not None:
+                    entry[key] = TemperatureConverter.convert(
+                        item[key], temperature_unit, UnitOfTemperature.CELSIUS
+                    )
+            if item.get("precipitation") is not None:
+                entry["precipitation"] = DistanceConverter.convert(
+                    item["precipitation"], rain_unit, "mm"
+                )
+            entries.append(entry)
+        return entries
 
     # --- writing -----------------------------------------------------------
 

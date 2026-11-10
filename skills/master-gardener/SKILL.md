@@ -43,7 +43,8 @@ If an action is refused or missing, say so; do not guess at garden state.
   mediterranean, conifer_woodland, native_woodland, meadow, lawn), `light`,
   `size_sqft`, `character` (the feeling the user wants, in their words),
   `next_to` (areas you walk or look into from it), planting counts by status,
-  task counts, and `soil` advice where the area has sensors.
+  task counts, `soil` advice where the area has sensors, and `alerts`
+  (frost or heat threatening named plantings) where a forecast is set up.
 - `care_profiles`: the kinds of upkeep the integration can schedule.
 - `plant_catalogue.ready`: if false, search and adding catalogue plants will
   fail; say so and carry on with what you can.
@@ -57,7 +58,11 @@ Do not compute these yourself or contradict them without a reason you state:
   If the user asks "when do I start tomatoes", read it from `list_tasks`.
 - **Water and fertilizer.** `soil.water.needed` and `soil.fertilizer.needed`
   come from the area's sensors and thresholds. It already refuses to advise
-  feeding on dry soil or outside the growing season. Report its `reason`.
+  feeding on dry soil or outside the growing season, and holds off
+  watering when rain is forecast. Report its `reason`.
+- **Frost and heat.** `alerts` come from the forecast, each plant's frost
+  tolerance and what is actually in the ground. Each has a `date`, the
+  `plants` at risk and a `reason`; the matching task is in `list_tasks`.
 - **Hardiness.** `search_plants` returns only plants hardy in the user's zone
   unless you pass `all_zones: true`.
 
@@ -117,8 +122,8 @@ and tell the user.
 2. Lead with what is overdue and what is weather- or time-critical. Group by
    area. Skip nothing that is overdue, but do not read out thirty items:
    summarise and offer the rest.
-3. Mention any area whose `soil` says water or fertilizer is needed, with the
-   reason.
+3. Lead with any `alerts`: frost or heat will not wait. Then mention any
+   area whose `soil` says water or fertilizer is needed, with the reason.
 4. For planning ahead: `list_tasks` with `show: upcoming` and `days: 14`.
    Sowing and ordering tasks need lead time; raise those early.
 5. If the user has a seed or supply inventory in Home Assistant, check it
@@ -128,7 +133,8 @@ and tell the user.
 
 `list_tasks` to find the task, then `complete_task`. Completing a planting
 task records the planting date. Completing a watering or fertilizing task
-hides it for a while; it returns if the soil still says so.
+hides it for a while; it returns if the soil still says so. The same goes
+for a frost or heat task while the forecast still says so.
 
 If they did something with no matching task, that is fine; note it with
 `add_task` only if it is worth remembering.

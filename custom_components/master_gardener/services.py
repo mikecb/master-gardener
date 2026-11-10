@@ -210,6 +210,17 @@ def _area(manager: GardenManager, area: ConfigSubentry, names: dict[str, str]) -
             )
             if item
         }
+    if manager.weather_entity:
+        out["alerts"] = [
+            {
+                "kind": kind,
+                "date": alert.day.isoformat(),
+                "reason": alert.reason,
+                "plants": list(alert.plants),
+            }
+            for kind, alert in manager.weather_alerts(area).items()
+            if alert
+        ]
     return out
 
 

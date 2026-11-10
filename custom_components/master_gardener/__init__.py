@@ -76,6 +76,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bo
             async_track_state_change_event(hass, sensors, manager.async_notify)
         )
 
+    # The forecast holds off watering and warns of frost and heat. It is read
+    # in the background: the weather entity may not be up yet.
+    if weather := manager.weather_entity:
+        entry.async_create_background_task(
+            hass, manager.async_update_forecast(), "master_gardener forecast"
+        )
+        entry.async_on_unload(
+            async_track_time_interval(
+                hass, manager.async_update_forecast, timedelta(hours=1)
+            )
+        )
+        entry.async_on_unload(
+            async_track_state_change_event(
+                hass, [weather], manager.async_weather_changed
+            )
+        )
+
     # The plant catalogue downloads in the background: setup never waits on it,
     # and existing plantings keep their own copy of their plant's record.
     async def update_catalogue(_now: datetime | None = None) -> None:
