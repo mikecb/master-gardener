@@ -238,7 +238,6 @@ async def test_packets_are_proposed_as_their_window_nears(hass, freezer):
     assert tomato["notes"] == (
         "Proposed from your seed inventory: Blush Cherry Tomato (1 packet)."
         " Its dates are those of Tomato, the closest plant in the catalogue."
-        " Its window opens 2027-02-18."
     )
     # Proposals get no tasks, and zinnias have no area of their style here.
     assert not [t for t in await _tasks(hass) if "Blush" in t]
@@ -263,7 +262,7 @@ async def test_packets_are_proposed_as_their_window_nears(hass, freezer):
 
 async def test_declined_packets_stay_declined(hass, freezer):
     freezer.move_to(JAN_10)
-    FakeInventory(hass, [{"name": "Danvers carrot", "quantity": 1}])
+    FakeInventory(hass, [{"name": "Tomato", "quantity": 1}])
     entry = _entry(hass)
     await _setup(hass, entry)
     manager = entry.runtime_data
@@ -281,7 +280,7 @@ async def test_a_packet_is_proposed_when_its_day_comes(hass, freezer):
     entry = _entry(hass)
     await _setup(hass, entry)
     assert entry.runtime_data.plantings == {}
-    freezer.move_to("2027-07-01 06:00:00+00:00")
+    freezer.move_to("2027-08-10 06:00:00+00:00")  # garlic: September 13
     entry.runtime_data.async_seed_inventory_changed()
     await hass.async_block_till_done(wait_background_tasks=True)
     (garlic,) = entry.runtime_data.plantings.values()

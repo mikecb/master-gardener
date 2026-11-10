@@ -277,6 +277,37 @@
         "no_plantings": "There are no plantings to manage yet. Add some with Add plantings.",
         "not_loaded": "Master Gardener is not running. Reload it and try again."
       }
+    },
+    "review_proposals": {
+      "entry_type": "Proposal reviews",
+      "initiate_flow": {
+        "user": "Review proposals"
+      },
+      "step": {
+        "user": {
+          "title": "Review proposals",
+          "description": "Which garden area's proposals?",
+          "data": {
+            "area": "Garden area"
+          }
+        },
+        "review": {
+          "title": "Proposed for {area}",
+          "description": "{proposals}\n\nFor each one: grow it (its tasks start), add it to the build plan to buy later, turn it down, or decide later.",
+          "data": {
+            "notes": "Why turn these down?"
+          },
+          "data_description": {
+            "notes": "Optional. Kept with each one you turn down, so it is not proposed again for the same reason."
+          }
+        }
+      },
+      "abort": {
+        "reviewed": "{area}: {summary}.",
+        "nothing_decided": "Nothing was decided; the proposals are still waiting.",
+        "no_proposals": "There are no proposed plantings to review.",
+        "not_loaded": "Master Gardener is not running. Reload it and try again."
+      }
     }
   },
   "selector": {
@@ -315,6 +346,14 @@
         "established": "Before this year (date unknown)",
         "on_date": "On a date",
         "not_yet": "Not planted yet"
+      }
+    },
+    "proposal_choice": {
+      "options": {
+        "later": "Decide later",
+        "active": "Yes, grow it",
+        "planned": "Yes, add to the build plan",
+        "removed": "No, turn it down"
       }
     }
   },

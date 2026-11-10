@@ -229,7 +229,9 @@ rotation, space, what failed there before), and offer to accept
 (`set_planting_status` `active`) or decline (`removed`, with why). Where the
 notes say the dates are those of the closest catalogue plant, check that
 plant is a fair stand-in; if not, suggest a better one through Manage
-plantings.
+plantings. The user can also decide them all at once with **Review
+proposals** on the integration page; each area with proposals has a "Decide
+on N proposed plantings" to-do item pointing there.
 
 ## A scheduled check-in
 
