@@ -51,7 +51,9 @@ budget phasing, the advisor's prompt building) go in `engine/` too.
 - **Planting**: a plant (OpenPlantDB id or free text) in an area, with its
   own copy of the plant's record and a care profile, so the calendar works
   with no catalogue on disk. Also quantity,
-  planted date and status `active | proposed | planned | dead | removed`.
+  planted date (or `established`: in the ground for years, date unknown,
+  which ends a perennial's planting task) and status
+  `active | proposed | planned | dead | removed`.
   Dead plantings are kept: they are evidence for future recommendations.
   `planned` is agreed and waiting in the build plan; it carries a priority,
   an optional tier override and earliest year, and once bought the date and
@@ -129,6 +131,17 @@ spent this year.
   January), anything else from four weeks before the last frost to the first
   frost. Purchases made this year stay as completed tasks, so unticking one
   undoes it.
+
+### Adding plantings in the UI
+
+**Add plantings** on the integration page is a config subentry flow that
+never creates a subentry: it records plantings with the garden and ends with
+a summary. A typed name is taken as is only when it is a catalogue plant's
+name (allowing plurals). A name that matched only a catalogue id ("lavender"
+is Spanish lavender) is confirmed alongside its genus; anything else is
+offered as up to eight candidates from a wider search, ranked by a name that
+ends with the typed words, then the genus and species most results share,
+then the shortest name. Annuals are always counted as planted this season.
 
 ## Roadmap
 

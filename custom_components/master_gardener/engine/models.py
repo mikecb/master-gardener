@@ -63,6 +63,8 @@ class Planting:
     profile: str | None = None  # care profile supplying upkeep tasks
     quantity: int = 1
     planted_on: date | None = None
+    # In the ground since before it was recorded, on a date nobody knows.
+    established: bool = False
     added_on: date | None = None
     status: str = ACTIVE
     notes: str = ""
@@ -87,6 +89,7 @@ class Planting:
             "profile": self.profile,
             "quantity": self.quantity,
             "planted_on": _iso(self.planted_on),
+            "established": self.established,
             "added_on": _iso(self.added_on),
             "status": self.status,
             "notes": self.notes,
@@ -109,6 +112,7 @@ class Planting:
             profile=data.get("profile"),
             quantity=data.get("quantity", 1),
             planted_on=_date(data.get("planted_on")),
+            established=data.get("established", False),
             added_on=_date(data.get("added_on")),
             status=data.get("status", ACTIVE),
             notes=data.get("notes", ""),

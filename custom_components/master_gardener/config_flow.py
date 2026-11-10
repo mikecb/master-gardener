@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import voluptuous as vol
@@ -54,13 +55,35 @@ from .const import (
     LIGHTS,
     STYLES,
     SUBENTRY_AREA,
+    SUBENTRY_PLANTING,
 )
 from .engine.climate import frost_dates_for_zone
+from .engine.plantdb import name_forms
 
 # Public USDA Plant Hardiness Zone Map data, keyed by ZIP code.
 ZONE_URL = "https://phzmapi.org/{zip_code}.json"
 
+if TYPE_CHECKING:
+    from .manager import GardenManager
+
 WEATHER_SELECTOR = EntitySelector(EntitySelectorConfig(domain="weather"))
+
+CONF_AREA = "area"
+CONF_PLANTS = "plants"
+CONF_WHEN = "when"
+CONF_PLANTED_ON = "planted_on"
+WHEN_THIS_SEASON = "this_season"
+WHEN_ESTABLISHED = "established"
+WHEN_DATE = "on_date"
+# Answers on the matching step besides a catalogue plant.
+KEEP = "_keep"
+SKIP = "_skip"
+MAX_LINES = 50
+MAX_CHOICES = 8
+# How many search results are ranked to find those choices.
+SEARCH_POOL = 50
+# "3 hosta", "3x hosta", "3 x hosta"
+QUANTITY = re.compile(r"^(\d+)\s*[x\u00d7]?\s+(.+)$", re.IGNORECASE)
 
 
 async def _lookup_zone(hass: HomeAssistant, zip_code: str) -> str:
@@ -175,7 +198,7 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_supported_subentry_types(
         cls, config_entry: ConfigEntry
     ) -> dict[str, type[ConfigSubentryFlow]]:
-        return {SUBENTRY_AREA: AreaSubentryFlow}
+        return {SUBENTRY_AREA: AreaSubentryFlow, SUBENTRY_PLANTING: PlantingFlow}
 
 
 class SiteOptionsFlow(OptionsFlow):
@@ -314,4 +337,251 @@ class AreaSubentryFlow(ConfigSubentryFlow):
             data_schema=self.add_suggested_values_to_schema(
                 self._schema(exclude=subentry.subentry_id), subentry.data
             ),
+        )
+
+
+def parse_plant_lines(text: str) -> list[tuple[int, str]]:
+    """One plant per line, optionally led by a count: [(quantity, name)]."""
+    lines = []
+    for raw in text.splitlines():
+        line = " ".join(raw.strip(" -*•\t").split())
+        if not line:
+            continue
+        quantity = 1
+        if match := QUANTITY.match(line):
+            quantity, line = max(1, int(match[1])), match[2]
+        lines.append((quantity, line))
+    return lines
+
+
+def names_match(typed: str, name: str) -> bool:
+    """Whether what was typed is the plant's name, allowing for a plural."""
+    return name.lower() in name_forms(typed)
+
+
+def _species(record: dict) -> tuple[str, str]:
+    words = record["scientific_name"].replace(chr(215), " ").split()
+    words = [w for w in words if w.lower() != "x"]
+    return (words[0] if words else "", " ".join(words[:2]))
+
+
+def rank_candidates(typed: str, candidates: list[dict]) -> list[dict]:
+    """Likeliest first.
+
+    A plant named for what was typed ("Buddy Boxwood", not "Boxwood Basil"),
+    then one of the genus and species most matches share (a Buxus, not the
+    African boxwood), then the shortest name.
+    """
+    forms = name_forms(typed)
+    genera = Counter(_species(c)[0] for c in candidates)
+    species = Counter(_species(c)[1] for c in candidates)
+
+    def key(record: dict) -> tuple:
+        name = record["common_name"].lower().split(" (")[0]
+        genus, binomial = _species(record)
+        return (
+            not any(name.endswith(form) for form in forms),
+            -genera[genus],
+            -species[binomial],
+            len(name),
+        )
+
+    return sorted(candidates, key=key)
+
+
+def _choice_label(record: dict) -> str:
+    kind = record.get("subcategory") or record.get("category") or ""
+    return f"{record['common_name']} - {record['scientific_name']}, {kind}"
+
+
+class PlantingFlow(ConfigSubentryFlow):
+    """Record plants already growing in an area, several at a time.
+
+    It never creates a subentry: the plantings are recorded with the garden
+    and the flow ends with a summary.
+    """
+
+    def __init__(self) -> None:
+        self._area = ""
+        self._when: dict[str, Any] = {}
+        self._lines: list[tuple[int, str]] = []
+        self._found: dict[int, dict] = {}  # line -> the one plant it names
+        self._choices: dict[int, list[dict]] = {}  # line -> candidates
+
+    def _manager(self) -> GardenManager | None:
+        entry = self._get_entry()
+        return getattr(entry, "runtime_data", None)
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        manager = self._manager()
+        if manager is None:
+            return self.async_abort(reason="not_loaded")
+        areas = manager.area_subentries
+        if not areas:
+            return self.async_abort(reason="no_areas")
+        if not manager.plants.ready:
+            return self.async_abort(reason="catalogue_not_ready")
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            lines = parse_plant_lines(user_input[CONF_PLANTS])
+            if not lines:
+                errors[CONF_PLANTS] = "no_plants"
+            elif len(lines) > MAX_LINES:
+                errors[CONF_PLANTS] = "too_many_plants"
+            elif user_input[CONF_WHEN] == WHEN_DATE and not user_input.get(
+                CONF_PLANTED_ON
+            ):
+                errors[CONF_PLANTED_ON] = "date_needed"
+            else:
+                self._area = user_input[CONF_AREA]
+                self._when = user_input
+                self._lines = lines
+                for index, (_, text) in enumerate(lines):
+                    record, candidates = await manager.plants.async_resolve(text)
+                    if record and names_match(text, record["common_name"]):
+                        self._found[index] = record
+                        continue
+                    if record:
+                        # Found by its id ("lavender" is Spanish lavender):
+                        # confirm it, alongside its relatives and namesakes.
+                        genus = record["scientific_name"].split()[0]
+                        others = [
+                            *await manager.plants.async_search(
+                                genus, limit=MAX_CHOICES
+                            ),
+                            *await manager.plants.async_search(text, limit=MAX_CHOICES),
+                        ]
+                        unique = {record["slug"]: record}
+                        for other in rank_candidates(text, others):
+                            unique.setdefault(other["slug"], other)
+                        candidates = list(unique.values())
+                    else:
+                        pool = list(candidates)
+                        for form in name_forms(text):
+                            pool += await manager.plants.async_search(
+                                form, limit=SEARCH_POOL
+                            )
+                        unique: dict[str, dict] = {}
+                        for found in pool:
+                            unique.setdefault(found["slug"], found)
+                        candidates = rank_candidates(text, list(unique.values()))
+                    self._choices[index] = candidates[:MAX_CHOICES]
+                if self._choices:
+                    return await self.async_step_match()
+                return self._finish(manager, {})
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_AREA): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=a.subentry_id, label=a.title)
+                            for a in areas
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Required(CONF_PLANTS): TextSelector(
+                    TextSelectorConfig(multiline=True)
+                ),
+                vol.Required(CONF_WHEN, default=WHEN_ESTABLISHED): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[WHEN_ESTABLISHED, WHEN_THIS_SEASON, WHEN_DATE],
+                        translation_key="planted_when",
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+                vol.Optional(CONF_PLANTED_ON): DateSelector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(schema, user_input),
+            errors=errors,
+        )
+
+    def _key(self, index: int) -> str:
+        """The field for one line, labelled with what was typed."""
+        quantity, text = self._lines[index]
+        return (
+            f"{index + 1}. {quantity} {text}"
+            if quantity > 1
+            else f"{index + 1}. {text}"
+        )
+
+    async def async_step_match(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Pick the plant meant where a line matched several, or none."""
+        manager = self._manager()
+        if manager is None:
+            return self.async_abort(reason="not_loaded")
+        if user_input is not None:
+            return self._finish(
+                manager,
+                {index: user_input[self._key(index)] for index in self._choices},
+            )
+        fields: dict[Any, Any] = {}
+        for index, candidates in self._choices.items():
+            text = self._lines[index][1]
+            options = [
+                SelectOptionDict(value=c["slug"], label=_choice_label(c))
+                for c in candidates
+            ]
+            options += [
+                SelectOptionDict(
+                    value=KEEP, label=f'None of these: keep "{text}" as typed'
+                ),
+                SelectOptionDict(value=SKIP, label="Skip this one"),
+            ]
+            default = candidates[0]["slug"] if candidates else KEEP
+            fields[vol.Required(self._key(index), default=default)] = SelectSelector(
+                SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN)
+            )
+        return self.async_show_form(step_id="match", data_schema=vol.Schema(fields))
+
+    def _finish(
+        self, manager: GardenManager, picked: dict[int, str]
+    ) -> SubentryFlowResult:
+        when = self._when[CONF_WHEN]
+        today = manager.today
+        planted_on = (
+            date.fromisoformat(self._when[CONF_PLANTED_ON])
+            if when == WHEN_DATE
+            else None
+        )
+        candidates = {
+            c["slug"]: c for options in self._choices.values() for c in options
+        }
+        added = []
+        for index, (quantity, text) in enumerate(self._lines):
+            choice = picked.get(index)
+            if choice == SKIP:
+                continue
+            record = self._found.get(index) or candidates.get(choice or "")
+            annual = record is not None and record["season"] != "perennial"
+            planting = manager.add_planting_record(
+                self._area,
+                record,
+                name=None if record else text,
+                quantity=quantity,
+                planted_on=planted_on
+                or (today if when == WHEN_THIS_SEASON or annual else None),
+                established=when == WHEN_ESTABLISHED and not annual,
+                save=False,
+            )
+            added.append(planting)
+        if not added:
+            return self.async_abort(reason="nothing_added")
+        manager.plantings_added()
+        area = next(
+            a.title for a in manager.area_subentries if a.subentry_id == self._area
+        )
+        names = ", ".join(
+            f"{p.quantity} {p.name}" if p.quantity > 1 else p.name for p in added
+        )
+        return self.async_abort(
+            reason="plantings_added",
+            description_placeholders={"area": area, "plants": names},
         )

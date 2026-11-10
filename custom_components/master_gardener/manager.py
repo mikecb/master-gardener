@@ -630,23 +630,14 @@ class GardenManager:
         plant: str,
         *,
         name: str | None = None,
-        quantity: int = 1,
-        planted_on: date | None = None,
-        notes: str = "",
         profile: str | None = None,
-        status: str = ACTIVE,
-        estimated_cost: float | None = None,
-        priority: str = "normal",
-        tier: str | None = None,
-        not_before: int | None = None,
+        **details,
     ) -> Planting:
         """Record a planting, looking the plant up in the catalogue."""
         if not self.plants.ready:
             raise ServiceValidationError(
                 "The plant catalogue has not been downloaded yet. Try again shortly."
             )
-        if profile and profile not in self.catalog.profiles:
-            raise ServiceValidationError(f"Unknown care profile {profile}")
         record, candidates = await self.plants.async_resolve(plant)
         if record is None and candidates:
             options = ", ".join(
@@ -655,15 +646,47 @@ class GardenManager:
             raise ServiceValidationError(
                 f"Several plants match '{plant}'. Use one of these ids: {options}"
             )
+        return self.add_planting_record(
+            area_id,
+            record,
+            name=name or (None if record else plant),
+            profile=profile,
+            **details,
+        )
+
+    def add_planting_record(
+        self,
+        area_id: str,
+        record: dict | None,
+        *,
+        name: str | None = None,
+        quantity: int = 1,
+        planted_on: date | None = None,
+        established: bool = False,
+        notes: str = "",
+        profile: str | None = None,
+        status: str = ACTIVE,
+        estimated_cost: float | None = None,
+        priority: str = "normal",
+        tier: str | None = None,
+        not_before: int | None = None,
+        save: bool = True,
+    ) -> Planting:
+        """Record a planting of a catalogue plant, or of one it does not have."""
+        if profile and profile not in self.catalog.profiles:
+            raise ServiceValidationError(f"Unknown care profile {profile}")
+        if record is None and not name:
+            raise ServiceValidationError("A plant not in the catalogue needs a name")
         planting = Planting(
             id=uuid4().hex[:8],
             area_id=area_id,
-            name=name or (record["common_name"] if record else plant),
+            name=name or record["common_name"],
             plant=record["slug"] if record else None,
             plant_data=record,
             profile=profile or (care_profile(record) if record else None),
             quantity=quantity,
             planted_on=planted_on,
+            established=established,
             added_on=self.today,
             status=status,
             notes=notes,
@@ -673,8 +696,13 @@ class GardenManager:
             not_before=not_before,
         )
         self.plantings[planting.id] = planting
-        self._changed()
+        if save:
+            self._changed()
         return planting
+
+    def plantings_added(self) -> None:
+        """Save after adding several plantings with save=False."""
+        self._changed()
 
     async def async_update_catalogue(self, force: bool = False) -> bool:
         """Fetch the plant catalogue if due, then refresh every planting's record."""

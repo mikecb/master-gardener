@@ -105,6 +105,45 @@
       "abort": {
         "reconfigure_successful": "Garden area updated."
       }
+    },
+    "planting": {
+      "entry_type": "Planting",
+      "initiate_flow": {
+        "user": "Add plantings"
+      },
+      "step": {
+        "user": {
+          "title": "Add plantings",
+          "description": "Record plants that are already growing. Each gets the upkeep tasks for its kind, and the weather and soil alerts count it. To plan something you have not bought yet, ask your gardener agent or use the Add planting action with status planned.",
+          "data": {
+            "area": "Garden area",
+            "plants": "Plants",
+            "when": "Planted",
+            "planted_on": "Date planted"
+          },
+          "data_description": {
+            "plants": "One per line, as you call it: hosta, japanese maple, Cherokee Purple tomato. Start a line with a number for several, e.g. 3 hosta.",
+            "when": "Annuals always count as planted this season unless you give a date.",
+            "planted_on": "Only used with \"On a date\"."
+          }
+        },
+        "match": {
+          "title": "Which plants do you mean?",
+          "description": "These names match more than one plant in the catalogue, or none exactly. Pick the one you have. A plant kept as typed is tracked without catalogue dates."
+        }
+      },
+      "error": {
+        "no_plants": "Enter at least one plant.",
+        "too_many_plants": "Enter at most 50 plants at a time.",
+        "date_needed": "Pick the date they were planted."
+      },
+      "abort": {
+        "plantings_added": "Added to {area}: {plants}.",
+        "nothing_added": "Nothing was added.",
+        "no_areas": "Add a garden area first.",
+        "catalogue_not_ready": "The plant catalogue is still downloading. Try again in a few minutes.",
+        "not_loaded": "Master Gardener is not running. Reload it and try again."
+      }
     }
   },
   "selector": {
@@ -129,6 +168,13 @@
         "part_shade": "Part shade",
         "shade": "Shade",
         "mixed": "Mixed"
+      }
+    },
+    "planted_when": {
+      "options": {
+        "established": "Before this year (date unknown)",
+        "this_season": "This season",
+        "on_date": "On a date"
       }
     }
   },

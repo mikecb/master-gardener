@@ -132,18 +132,24 @@ def get(db_path: Path, slug: str) -> dict | None:
     return rows[0] if rows else None
 
 
+def name_forms(text: str) -> list[str]:
+    """A name as typed, then singular: tomatoes, carrots, peonies."""
+    wanted = " ".join(text.lower().split())
+    forms = [wanted]
+    if wanted.endswith("ies"):
+        forms.append(wanted[:-3] + "y")
+    forms += [wanted.removesuffix("es"), wanted.removesuffix("s")]
+    return list(dict.fromkeys(forms))
+
+
 def resolve(db_path: Path, text: str) -> tuple[dict | None, list[dict]]:
     """Find the one plant a user means by an id or a name.
 
     Returns (plant, []) for an exact id or an unambiguous exact name, and
     otherwise (None, candidates) with the closest matches, possibly none.
     """
-    wanted = " ".join(text.lower().split())
     by_name: list[dict] = []
-    # As typed, then singular: "tomatoes" and "carrots" mean tomato and carrot.
-    for name in dict.fromkeys(
-        (wanted, wanted.removesuffix("es"), wanted.removesuffix("s"))
-    ):
+    for name in name_forms(text):
         if record := get(db_path, name.replace(" ", "-")):
             return record, []
         by_name = by_name or _query(db_path, "name_lc = ?", (name,))

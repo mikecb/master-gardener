@@ -80,6 +80,12 @@ add_planting:
       description: When it went in the ground. Leave empty if it is only planned.
       selector:
         date:
+    established:
+      name: Established
+      description: It has been in the ground for years and the date is not known. Stops a perennial's planting task from coming back each year.
+      default: false
+      selector:
+        boolean:
     status:
       name: Status
       description: active is growing or about to be planted and gets tasks. planned is agreed but not yet bought - it waits in the build plan for its year and budget. proposed is a suggestion awaiting a decision. Neither planned nor proposed gets tasks until it becomes active.

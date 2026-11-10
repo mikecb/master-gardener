@@ -27,8 +27,17 @@ your Home Assistant config directory and restart. Requires Home Assistant
    - a **to-do list** of what needs doing now (tick to record it; add an item
      to report a problem such as "grass too long"),
    - sensors: **Tasks due**, **Tasks overdue**, **Next task**, **Plantings**.
-3. Find a plant's id with the **Master Gardener: Search plants** action, then
-   record what grows where with **Master Gardener: Add planting**:
+3. Record what already grows there: on the integration page choose **Add
+   plantings**, pick the area, and type the plants one per line, as you call
+   them (`3 hosta`, `japanese maple`, `Cherokee Purple tomato`). Say when they
+   went in: **before this year** if you don't know the date, **this season**,
+   or **on a date**. Names that match one plant are recorded straight away;
+   for the rest, a second screen lists the likeliest catalogue plants to pick
+   from, or keeps your name as typed. Plants recorded as there before this
+   year get their upkeep tasks but no planting task.
+
+   Automations and agents use the **Master Gardener: Add planting** action
+   instead (find ids with **Search plants**):
 
    ```yaml
    action: master_gardener.add_planting
