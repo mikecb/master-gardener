@@ -80,6 +80,11 @@ class Planting:
     # again, and accepting it is not a purchase.
     from_seed: str | None = None
 
+    @property
+    def short_name(self) -> str:
+        """The name without the catalogue's aside: 'Kuroda Dawn Carrot'."""
+        return self.name.split(" (")[0]
+
     def to_dict(self, *, with_record: bool = True) -> dict:
         """As stored; with_record=False leaves out the bulky plant record."""
         record = {"plant_data": self.plant_data} if with_record else {}

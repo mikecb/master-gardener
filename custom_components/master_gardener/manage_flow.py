@@ -25,6 +25,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .engine.models import ACTIVE, DEAD, PLANNED, PROPOSED, REMOVED, Planting
+from .engine.seeds import window_label
 
 if TYPE_CHECKING:
     from .manager import GardenManager
@@ -341,4 +342,140 @@ class ManagePlantingsFlow(ConfigSubentryFlow):
             ),
             errors=errors,
             description_placeholders=placeholders,
+        )
+
+
+LATER = "later"
+CHOICES = [LATER, ACTIVE, PLANNED, REMOVED]
+MAX_REVIEWED = 40  # per form; the rest wait for the next review
+NOTES_SHOWN = 240
+
+
+class ReviewProposalsFlow(ConfigSubentryFlow):
+    """Decide on an area's proposed plantings in one go."""
+
+    def __init__(self) -> None:
+        self._area = ""
+        self._ids: list[str] = []
+
+    def _manager(self) -> GardenManager | None:
+        return getattr(self._get_entry(), "runtime_data", None)
+
+    def _proposed(self, manager: GardenManager, area_id: str) -> list[Planting]:
+        return sorted(
+            (
+                p
+                for p in manager.plantings.values()
+                if p.area_id == area_id and p.status == PROPOSED
+            ),
+            key=lambda p: p.short_name.lower(),
+        )[:MAX_REVIEWED]
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        manager = self._manager()
+        if manager is None:
+            return self.async_abort(reason="not_loaded")
+        names = {a.subentry_id: a.title for a in manager.area_subentries}
+        areas = sorted(
+            {
+                p.area_id
+                for p in manager.plantings.values()
+                if p.status == PROPOSED and p.area_id in names
+            },
+            key=lambda a: names[a].lower(),
+        )
+        if not areas:
+            return self.async_abort(reason="no_proposals")
+        if user_input is not None or len(areas) == 1:
+            self._area = user_input[CONF_AREA] if user_input else areas[0]
+            return await self.async_step_review()
+        options = [
+            SelectOptionDict(
+                value=a,
+                label=f"{names[a]} ({len(self._proposed(manager, a))})",
+            )
+            for a in areas
+        ]
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_AREA): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options, mode=SelectSelectorMode.DROPDOWN
+                        )
+                    )
+                }
+            ),
+        )
+
+    def _key(self, index: int, planting: Planting) -> str:
+        return f"{index + 1}. {planting.short_name}"
+
+    async def async_step_review(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        manager = self._manager()
+        if manager is None:
+            return self.async_abort(reason="not_loaded")
+        area = next(
+            a.title for a in manager.area_subentries if a.subentry_id == self._area
+        )
+        if user_input is not None:
+            counts = dict.fromkeys(CHOICES, 0)
+            for index, planting_id in enumerate(self._ids):
+                planting = manager.plantings.get(planting_id)
+                if planting is None or planting.status != PROPOSED:
+                    continue  # decided elsewhere meanwhile
+                choice = user_input.get(self._key(index, planting), LATER)
+                counts[choice] += 1
+                if choice != LATER:
+                    notes = user_input.get(CONF_NOTES) if choice == REMOVED else None
+                    manager.set_planting_status(planting_id, choice, notes)
+            if counts[LATER] == sum(counts.values()):
+                return self.async_abort(reason="nothing_decided")
+            parts = [
+                f"{counts[ACTIVE]} to grow" if counts[ACTIVE] else "",
+                f"{counts[PLANNED]} added to the build plan" if counts[PLANNED] else "",
+                f"{counts[REMOVED]} turned down" if counts[REMOVED] else "",
+                f"{counts[LATER]} left for later" if counts[LATER] else "",
+            ]
+            return self.async_abort(
+                reason="reviewed",
+                description_placeholders={
+                    "area": area,
+                    "summary": ", ".join(p for p in parts if p),
+                },
+            )
+
+        proposed = self._proposed(manager, self._area)
+        self._ids = [p.id for p in proposed]
+        today, site = manager.today, manager.site
+        lines = []
+        fields: dict[Any, Any] = {}
+        for index, planting in enumerate(proposed):
+            label = window_label(planting.plant_data, site, today)
+            when = f": {label}" if label else ""
+            notes = planting.notes.strip().replace("\n", " ")
+            if len(notes) > NOTES_SHOWN:
+                notes = notes[: NOTES_SHOWN - 1].rstrip() + "…"
+            lines.append(f"- **{self._key(index, planting)}**{when}. {notes}".rstrip())
+            # Seed on hand is not bought: no build plan for a packet.
+            choices = [c for c in CHOICES if not (planting.from_seed and c == PLANNED)]
+            fields[vol.Required(self._key(index, planting), default=LATER)] = (
+                SelectSelector(
+                    SelectSelectorConfig(
+                        options=choices,
+                        translation_key="proposal_choice",
+                        mode=SelectSelectorMode.DROPDOWN,
+                    )
+                )
+            )
+        fields[vol.Optional(CONF_NOTES)] = NOTES
+        return self.async_show_form(
+            step_id="review",
+            data_schema=vol.Schema(fields),
+            description_placeholders={"area": area, "proposals": "\n".join(lines)},
         )

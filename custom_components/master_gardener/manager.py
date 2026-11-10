@@ -76,7 +76,14 @@ from .engine.plan import (
 )
 from .engine.planting_rules import care_profile
 from .engine.schedule import IN_GROUND_KINDS, build_tasks
-from .engine.seeds import SeedItem, apply_seed, parse_items, proposals
+from .engine.seeds import (
+    SeedItem,
+    apply_seed,
+    next_window,
+    parse_items,
+    proposals,
+    window_label,
+)
 from .engine.weather import (
     Alert,
     DayForecast,
@@ -105,6 +112,10 @@ CARE_TITLES = {
     CARE_FROST: "Protect {name} from frost",
     CARE_HEAT: "Shield {name} from heat",
 }
+# Ticking "Decide on proposed plantings" puts it away this long.
+PROPOSALS_SNOOZE = timedelta(days=7)
+# Without a window to go by, proposals are wanted decided within this.
+PROPOSALS_DUE = timedelta(days=14)
 # The forecasts a weather entity may offer, by its feature flag, best first.
 FORECAST_TYPES = ((1, "daily"), (4, "twice_daily"), (2, "hourly"))
 # A forecast that could not be refreshed for this long is no longer trusted.
@@ -250,7 +261,7 @@ class GardenManager:
                     today + timedelta(days=LOOKAHEAD_DAYS),
                 ),
             )
-        tasks = [*self._care_tasks(), *self._cache[1]]
+        tasks = [*self._care_tasks(), *self._proposal_tasks(), *self._cache[1]]
         if area_id is None:
             return tasks
         return [t for t in tasks if t.area_id == area_id]
@@ -606,7 +617,6 @@ class GardenManager:
                     f" Its dates are those of {seed.record['common_name']}, the"
                     " closest plant in the catalogue."
                 )
-            notes += f" Its window opens {proposal.opens.isoformat()}."
             planting = self.add_planting_record(
                 proposal.area_id,
                 seed.record,
@@ -643,6 +653,55 @@ class GardenManager:
             _LOGGER.debug("Could not read the seed inventory: %s", err)
             return None
         return parse_items(response)
+
+    # --- proposals -----------------------------------------------------------
+
+    def _proposal_tasks(self) -> list[Task]:
+        """One reminder per area with plantings proposed and not decided."""
+        now = dt_util.utcnow()
+        today = self.today
+        site = self.site
+        tasks = []
+        for area in self.area_subentries:
+            proposed = sorted(
+                (
+                    p
+                    for p in self.plantings.values()
+                    if p.area_id == area.subentry_id and p.status == PROPOSED
+                ),
+                key=lambda p: p.short_name.lower(),
+            )
+            task_id = f"proposals:{area.subentry_id}"
+            snoozed_until = self._snoozed.get(task_id)
+            if not proposed or (snoozed_until and snoozed_until > now):
+                continue
+            opens = [
+                window[0]
+                for p in proposed
+                if p.plant_data and (window := next_window(p.plant_data, site, today))
+            ]
+            due = max(min(opens), today) if opens else today + PROPOSALS_DUE
+            described = []
+            for planting in proposed:
+                label = window_label(planting.plant_data, site, today)
+                name = planting.short_name
+                described.append(f"{name} ({label})" if label else name)
+            count = len(proposed)
+            tasks.append(
+                Task(
+                    id=task_id,
+                    area_id=area.subentry_id,
+                    title=f"Decide on {count} proposed planting"
+                    + ("s" if count > 1 else ""),
+                    kind="decide",
+                    start=today,
+                    end=due,
+                    detail="Review proposals, on the Master Gardener integration page: "
+                    + "; ".join(described)
+                    + ".",
+                )
+            )
+        return tasks
 
     # --- weather -----------------------------------------------------------
 
@@ -829,7 +888,8 @@ class GardenManager:
         """Fetch the plant catalogue if due, then refresh every planting's record."""
         changed = await self.plants.async_refresh(force)
         if changed:
-            for planting in self.plantings.values():
+            # A copy: seed proposals may add plantings while this awaits.
+            for planting in list(self.plantings.values()):
                 if not planting.plant:
                     continue
                 if record := await self.plants.async_get(planting.plant):
@@ -952,6 +1012,10 @@ class GardenManager:
             return
         if task_id.startswith("plan:"):
             self._buy(task_id)
+            return
+        if task_id.startswith("proposals:"):
+            self._snoozed[task_id] = dt_util.utcnow() + PROPOSALS_SNOOZE
+            self._changed()
             return
         task = self._find(task_id)
         planting = self.plantings.get(task.planting_id or "")

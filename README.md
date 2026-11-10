@@ -49,6 +49,14 @@ your Home Assistant config directory and restart. Requires Home Assistant
    date, care profile, or the catalogue plant if the wrong one was matched.
    Dead and removed plantings are kept as history.
 
+   Proposals, whether from a gardener agent or from your seed packets, wait
+   for a decision. Each area with any gets a **Decide on N proposed
+   plantings** to-do item, due when the earliest of their windows opens
+   (ticking it puts it away for a week). **Review proposals** on the
+   integration page lists an area's proposals with what to do first and
+   when, and decides them in one go: grow it, add it to the build plan,
+   turn it down (with a reason), or decide later.
+
    Automations and agents use the **Master Gardener: Add planting** action
    instead (find ids with **Search plants**):
 
@@ -124,11 +132,11 @@ carrot planting. An item with quantity 0 counts as used up. The inventory is
 read again whenever it changes.
 
 Packets also become **proposals**, the way an AI gardener's suggestions do.
-About twelve weeks before a packet's sowing or planting window opens, if
+About six weeks before a packet's sowing or planting window opens, if
 nothing growing or planned would use it, Master Gardener proposes planting it
 in an area that suits it (vegetables and herbs in a vegetable garden, fruit in
-an orchard, flowers in a cottage, English or meadow garden). Decide in
-**Manage plantings**: accept it to schedule its sowing, or turn it down. A
+an orchard, flowers in a cottage, English or meadow garden). Decide with
+**Review proposals** (below): grow it to schedule its sowing, or turn it down. A
 packet is proposed once; turning it down is remembered. Packets the catalogue
 does not know by name ("Blush Cherry Tomato") take the dates of the closest
 plant it does know ("Cherry Tomato"), which the proposal's notes name, and

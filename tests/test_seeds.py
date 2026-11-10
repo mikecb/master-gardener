@@ -22,6 +22,7 @@ from engine.seeds import (
     pick_area,
     proposals,
     stock,
+    window_label,
 )
 
 RECORDS = plant_fixture.records()
@@ -202,6 +203,18 @@ class ProposalTest(unittest.TestCase):
             date(2028, 2, 19),  # a leap year
         )
 
+    def test_window_label(self):
+        self.assertEqual(
+            window_label(RECORDS["tomato"], SITE, TODAY), "start indoors from Feb 18"
+        )
+        self.assertEqual(
+            window_label(RECORDS["carrot"], SITE, TODAY), "sow from Mar 25"
+        )
+        self.assertEqual(
+            window_label(RECORDS["hosta"], SITE, TODAY), "plant from Apr 15"
+        )
+        self.assertIsNone(window_label(None, SITE, TODAY))
+
     def test_pick_area_by_kind_of_plant(self):
         self.assertEqual(pick_area(RECORDS["carrot"], self.AREAS), "veg")
         self.assertEqual(pick_area(RECORDS["apple"], self.AREAS), "fruit")
@@ -215,36 +228,36 @@ class ProposalTest(unittest.TestCase):
                 seed("Blush Cherry Tomato", "tomato", guessed=True),
                 seed("Danvers carrot", "carrot"),
                 seed("Garlic", "garlic"),  # planted in autumn: not yet
-                seed("Zinnia", "zinnia"),  # April 15: more than 12 weeks out
+                seed("Zinnia", "zinnia"),  # April 15: more than 6 weeks out
                 seed("Mystery"),  # no plant: nothing to schedule
                 seed("Used carrot", "carrot", quantity=0),
                 seed("Old carrot", "carrot", expiry=date(2026, 1, 1)),
             ]
         )
+        # Carrots (March 25) are more than six weeks out too.
         self.assertEqual(
             [(p.seed.name, p.area_id, p.opens) for p in found],
-            [
-                ("Blush Cherry Tomato", "veg", date(2027, 2, 18)),
-                ("Danvers carrot", "veg", date(2027, 3, 25)),
-            ],
+            [("Blush Cherry Tomato", "veg", date(2027, 2, 18))],
         )
-        later = self.propose([seed("Zinnia", "zinnia")], today=date(2027, 2, 1))
-        self.assertEqual([p.area_id for p in later], ["front"])
+        later = self.propose(
+            [seed("Zinnia", "zinnia"), seed("Danvers carrot", "carrot")],
+            today=date(2027, 3, 10),
+        )
+        self.assertEqual([p.area_id for p in later], ["front", "veg"])
 
     def test_covered_packets_are_not_proposed(self):
-        packet = seed("Danvers carrot", "carrot")
-        growing = planting("carrot")
-        self.assertEqual(self.propose([packet], [growing]), [])
+        packet = seed("Blush Cherry Tomato", "tomato")
+        self.assertEqual(self.propose([packet], [planting("tomato")]), [])
         declined = Planting(
             id="x",
             area_id="veg",
-            name="Danvers carrot",
+            name="Blush Cherry Tomato",
             status="removed",
-            from_seed="Danvers carrot",
+            from_seed="Blush Cherry Tomato",
         )
         self.assertEqual(self.propose([packet], [declined]), [])
-        # A dead carrot does not cover the packet; only living or planned ones.
-        dead = planting("carrot", status="dead")
+        # A dead tomato does not cover the packet; only living or planned ones.
+        dead = planting("tomato", status="dead")
         self.assertEqual(len(self.propose([packet], [dead])), 1)
         self.assertEqual(self.propose([packet], areas=[("front", "cottage")]), [])
 

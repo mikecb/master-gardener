@@ -138,7 +138,7 @@ inventory's sensor changes and once the plant catalogue is ready.
   mustard mix must be a mustard). Such a guess is flagged.
 - Proposals: a usable packet with a catalogue plant, not yet proposed (the
   planting keeps `from_seed`), not covered by a growing or planned planting,
-  and with its sowing or planting window opening within twelve weeks, is
+  and with its sowing or planting window opening within six weeks, is
   proposed in the first area whose style suits its category. Checked when
   the inventory changes, when the catalogue arrives, and daily. Accepting a
   seed proposal records no purchase.
@@ -184,6 +184,13 @@ plantings), then planting, then a menu of what can happen to it given its
 status (active: died, removed, edit; planned: bought, dropped, edit;
 proposed: accept into the plan, plant now, decline, edit). Dead and removed
 plantings are not offered: they are history.
+
+**Review proposals** is a third: one form per area listing up to forty
+proposals, each with its first window ("start indoors from Jan 21") and
+notes, and a choice of later, grow, build plan or decline; a seed proposal
+has no build-plan choice, its seed being on hand. Proposals are surfaced as
+one generated to-do item per area, due when the earliest window opens (or in
+two weeks when none is known), snoozed for a week when ticked.
 
 ## Roadmap
 

@@ -23,8 +23,9 @@ SOW_KINDS = {"sow_indoors", "direct_sow"}
 ORDER_KIND = "order_seed"
 # Seed is wanted in hand this long before the sowing window opens.
 ORDER_LEAD = timedelta(weeks=6)
-# A packet is proposed for planting this long before its window opens.
-PROPOSE_LEAD = timedelta(weeks=12)
+# A packet is proposed for planting this long before its window opens: time
+# to decide where it goes and get set up, the seed being already on hand.
+PROPOSE_LEAD = timedelta(weeks=6)
 # Which garden styles suit which kind of plant, best first.
 AREA_STYLES = {
     "vegetable": ("vegetable",),
@@ -192,12 +193,34 @@ class Proposal:
     opens: date  # when its sowing or planting window opens
 
 
-def next_window(record: dict, site: Site, today: date) -> tuple[date, date] | None:
-    """The coming (or current) sowing or planting window for a plant."""
-    rule = next(
+WINDOW_VERBS = {
+    "sow_indoors": "start indoors",
+    "direct_sow": "sow",
+    "transplant": "plant out",
+    "plant": "plant",
+}
+
+
+def _first_planting_rule(record: dict) -> dict | None:
+    return next(
         (r for r in rules_for(record) if r["kind"] in PLANTING_KINDS and "anchor" in r),
         None,
     )
+
+
+def window_label(record: dict | None, site: Site, today: date) -> str | None:
+    """'start indoors from Jan 21': what to do first, and from when."""
+    rule = _first_planting_rule(record) if record else None
+    window = next_window(record, site, today) if rule else None
+    if not window:
+        return None
+    opens = window[0]
+    return f"{WINDOW_VERBS[rule['kind']]} from {opens:%b} {opens.day}"
+
+
+def next_window(record: dict, site: Site, today: date) -> tuple[date, date] | None:
+    """The coming (or current) sowing or planting window for a plant."""
+    rule = _first_planting_rule(record)
     if rule is None:
         return None
     for year in (today.year, today.year + 1):

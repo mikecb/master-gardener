@@ -64,12 +64,13 @@ from .const import (
     SUBENTRY_AREA,
     SUBENTRY_MANAGE,
     SUBENTRY_PLANTING,
+    SUBENTRY_REVIEW,
 )
 from .engine import frost_normals
 from .engine.climate import frost_dates_for_zone
 from .engine.matching import names_match, rank_candidates
 from .engine.plantdb import name_forms
-from .manage_flow import ManagePlantingsFlow
+from .manage_flow import ManagePlantingsFlow, ReviewProposalsFlow
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -291,6 +292,7 @@ class MasterGardenerConfigFlow(ConfigFlow, domain=DOMAIN):
             SUBENTRY_AREA: AreaSubentryFlow,
             SUBENTRY_PLANTING: PlantingFlow,
             SUBENTRY_MANAGE: ManagePlantingsFlow,
+            SUBENTRY_REVIEW: ReviewProposalsFlow,
         }
 
 
