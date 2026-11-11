@@ -1,15 +1,15 @@
 {
   "domain": "master_gardener",
   "name": "Master Gardener",
-  "codeowners": [
-    "@mikecb"
-  ],
-  "config_flow": true,
-  "dependencies": [
+  "after_dependencies": [
     "frontend",
     "http",
     "panel_custom"
   ],
+  "codeowners": [
+    "@mikecb"
+  ],
+  "config_flow": true,
   "documentation": "https://github.com/mikecb/master-gardener",
   "integration_type": "service",
   "iot_class": "calculated",

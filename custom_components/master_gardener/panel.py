@@ -22,6 +22,10 @@ DATA_KEY = "master_gardener_static_registered"
 
 
 async def async_register_panel(hass: HomeAssistant, version: str) -> None:
+    """Add the panel, if Home Assistant's frontend is running (it always is
+    outside tests and headless setups; the integration works without it)."""
+    if "frontend" not in hass.config.components:
+        return
     # Static paths cannot be removed again, so they are registered once per run.
     if not hass.data.get(DATA_KEY):
         await hass.http.async_register_static_paths(
@@ -40,4 +44,5 @@ async def async_register_panel(hass: HomeAssistant, version: str) -> None:
 
 
 def async_remove_panel(hass: HomeAssistant) -> None:
-    frontend.async_remove_panel(hass, PANEL_URL, warn_if_unknown=False)
+    if "frontend" in hass.config.components:
+        frontend.async_remove_panel(hass, PANEL_URL, warn_if_unknown=False)
