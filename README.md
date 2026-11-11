@@ -89,6 +89,24 @@ The task says so ("Every 6 days, usually 7: reported 2 times"), `get_garden`
 lists each area's adjustments, and **Master Gardener: Reset schedule
 adjustments** puts an area, or everything, back to normal.
 
+## The Garden panel
+
+Master Gardener adds **Garden** to the sidebar, with four views:
+
+- **Areas**: each garden area with its style, light, size and character,
+  what is due or overdue, soil and weather alerts, adjusted schedules, and
+  its neighbours; and where your frost dates came from.
+- **Plantings**: each area's plants, grouped as proposed, growing, planned,
+  died and removed. Proposals can be decided on the spot: grow it, plan it
+  (for anything still to buy), or turn it down.
+- **Build plan**: the plan year by year against the budget (spent, planned,
+  what is left) and why each item waits.
+- **Tasks**: what to do now, ticked off from there, and what comes up in the
+  next 30 days.
+
+It reads and changes the garden through the same actions an automation or
+an agent uses, and follows your Home Assistant theme, light or dark.
+
 ## Soil sensors
 
 Edit a garden area and pick its **soil moisture** and **soil fertility
