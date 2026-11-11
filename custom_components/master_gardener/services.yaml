@@ -474,3 +474,14 @@ update_plan_item:
           max: 1000000
           step: 0.01
           mode: box
+
+reset_schedule:
+  name: Reset schedule adjustments
+  description: Put repeating jobs such as mowing and deadheading back to their usual intervals. They are otherwise adjusted from what happens - sooner after problems are reported or the job is done early, later after it is repeatedly done late.
+  fields:
+    area:
+      name: Garden area
+      description: Area name or id. Leave empty for the whole property.
+      selector:
+        device:
+          integration: master_gardener

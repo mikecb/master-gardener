@@ -73,6 +73,22 @@ your Home Assistant config directory and restart. Requires Home Assistant
 
 The **Garden** device has a calendar and task counts for the whole property.
 
+## Schedules that learn
+
+Repeating jobs, mowing and deadheading, start at the usual interval (mowing
+weekly, deadheading roses fortnightly) and then follow what happens:
+
+- **Sooner** after two signals within 60 days that the job came round too
+  slowly: a problem you report that names it (add "Grass too long" to the
+  lawn's to-do list), or doing it before it was due.
+- **Later** after doing it late three times running with no complaint: it
+  was not needed that often.
+
+Each change is 15%, and an interval stays between half and double the usual.
+The task says so ("Every 6 days, usually 7: reported 2 times"), `get_garden`
+lists each area's adjustments, and **Master Gardener: Reset schedule
+adjustments** puts an area, or everything, back to normal.
+
 ## Soil sensors
 
 Edit a garden area and pick its **soil moisture** and **soil fertility
@@ -201,6 +217,7 @@ you can give the area's name.
 | `master_gardener.get_plan` | The build plan, year by year, against the budget |
 | `master_gardener.list_plantings` | What grows where, optionally by area or status |
 | `master_gardener.refresh_catalogue` | Download the latest plant catalogue now |
+| `master_gardener.reset_schedule` | Put adapted mowing and deadheading intervals back to normal |
 
 ## Use with an AI gardener
 

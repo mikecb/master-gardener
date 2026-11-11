@@ -165,6 +165,7 @@ LIST_TASKS_SCHEMA = vol.Schema(
     }
 )
 COMPLETE_TASK_SCHEMA = vol.Schema({vol.Required("task_id"): cv.string})
+RESET_SCHEDULE_SCHEMA = vol.Schema({vol.Optional(ATTR_AREA): cv.string})
 
 
 def _manager(hass: HomeAssistant) -> GardenManager:
@@ -252,6 +253,19 @@ def _area(manager: GardenManager, area: ConfigSubentry, names: dict[str, str]) -
             )
             if item
         }
+    if adjusted := manager.adjustments(area.subentry_id):
+        titles = {
+            t.series: t.title for t in manager.tasks(area.subentry_id) if t.series
+        }
+        out["schedule_adjustments"] = [
+            {
+                "task": titles.get(series, series),
+                "series": series,
+                "interval_factor": adjustment.factor,
+                "why": adjustment.reason,
+            }
+            for series, adjustment in adjusted.items()
+        ]
     if manager.weather_entity:
         out["alerts"] = [
             {
@@ -535,10 +549,17 @@ def async_setup_services(hass: HomeAssistant) -> None:
             state = task.state(today)
             if state == DONE or state not in wanted:
                 continue
+            if task.projected and state != UPCOMING:
+                continue  # a later repeat of a job still to do is not due yet
             if state == UPCOMING and task.start > horizon:
                 continue
             tasks.append(_task(task, manager, names))
         return {"today": today.isoformat(), "tasks": tasks}
+
+    async def reset_schedule(call: ServiceCall) -> ServiceResponse:
+        manager = _manager(hass)
+        reset = manager.reset_adjustments(_optional_area(hass, manager, call))
+        return {"reset": reset}
 
     async def complete_task(call: ServiceCall) -> ServiceResponse:
         _manager(hass).complete(call.data["task_id"])
@@ -576,6 +597,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
             SupportsResponse.OPTIONAL,
         ),
         ("search_plants", search_plants, SEARCH_PLANTS_SCHEMA, SupportsResponse.ONLY),
+        (
+            "reset_schedule",
+            reset_schedule,
+            RESET_SCHEDULE_SCHEMA,
+            SupportsResponse.OPTIONAL,
+        ),
         (
             "refresh_catalogue",
             refresh_catalogue,

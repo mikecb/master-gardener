@@ -143,6 +143,19 @@ inventory's sensor changes and once the plant catalogue is ready.
   the inventory changes, when the catalogue arrives, and daily. Accepting a
   seed proposal records no purchase.
 
+### Adaptive maintenance rules
+
+`engine/adapt.py` keeps, per repeating series, the signals since its last
+change: each completion (early: before the task's window; late: after it;
+on time) and each reported problem that names the job (a custom task in the
+area whose words match the job's kind). Two "sooner" signals (reports or
+early completions) within 60 days multiply the interval by 0.85; three late
+completions in a row with no report multiply it by 1.15; either uses the
+signals up. The factor stays within 0.5-2.0 of the profile's interval and
+is stored with its reason, which the task's detail repeats. Doing the job
+late is read as "not needed yet" rather than "too busy": if that is wrong,
+the complaints that follow tighten it again.
+
 ### Build plan rules
 
 The plan, like the calendar, is never stored: `engine/plan.py` works it out
@@ -220,8 +233,10 @@ two weeks when none is known), snoozed for a week when ticked.
    to the wishlist, spending or budget reshuffles the plan. Seed inventory:
    see phase 3. Still to do: replacing a dead planting through the plan
    (today the agent proposes the replacement).
-5. **Adaptive maintenance.** Repeated "overdue" feedback tightens an interval;
-   repeated early completion loosens it. Care profiles for shrubs and vines.
+5. **Adaptive maintenance (mostly built).** Built: repeating jobs adapt
+   their interval (`engine/adapt.py`): sooner after reported problems that
+   name them or after doing them early, later after repeatedly doing them
+   late. Still to do: care profiles for shrubs and vines.
 6. **Custom panel.** Property map, per-area planting plans, roadmap and budget
    views.
 
@@ -242,7 +257,9 @@ two weeks when none is known), snoozed for a week when ticked.
   station, its distance and height, so the user can judge. Where no station
   qualifies the zone estimate is used, which can be a week or two off.
 - The ZIP code cannot be changed after setup; only the frost dates can.
-- Overdue feedback creates a task; it does not yet change the schedule.
+- Only repeating jobs (mowing, deadheading) adapt; once-a-year jobs such as
+  pruning keep their frost-anchored dates. Reports are matched to a job by
+  a few words ("grass", "lawn", "mow"; "deadhead", "spent", "faded").
 - The budget is one amount for every year, in Home Assistant's currency; it
   does not inflate or carry unspent money forward.
 - Frost and heat alerts trust the forecast's daily low and high as given, and

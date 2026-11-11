@@ -40,6 +40,16 @@ from .const import (
     SEED_INVENTORY_DOMAIN,
     SUBENTRY_AREA,
 )
+from .engine.adapt import (
+    EARLY,
+    LATE,
+    ON_TIME,
+    REPORT,
+    Adjustment,
+    Signal,
+    adjust,
+    reported,
+)
 from .engine.care import (
     Advice,
     default_dry_below,
@@ -152,6 +162,9 @@ class GardenManager:
         self.projects: dict[str, Project] = {}
         self._completions: dict[str, date] = {}
         self._last_done: dict[str, date] = {}
+        # Adaptive maintenance: what each repeating series has told us.
+        self._signals: dict[str, list[Signal]] = {}
+        self._adjustments: dict[str, Adjustment] = {}
         self._area_since: dict[str, date] = {}
         self._snoozed: dict[str, datetime] = {}
         self._care_on: dict[tuple[str, str], bool] = {}
@@ -176,6 +189,14 @@ class GardenManager:
         }
         self._completions = _dates(data.get("completions", {}))
         self._last_done = _dates(data.get("last_done", {}))
+        self._signals = {
+            series: [Signal.from_list(raw) for raw in signals]
+            for series, signals in data.get("signals", {}).items()
+        }
+        self._adjustments = {
+            series: Adjustment(factor=raw[0], reason=raw[1])
+            for series, raw in data.get("adjustments", {}).items()
+        }
         self._area_since = _dates(data.get("area_since", {}))
         self._snoozed = {
             key: datetime.fromisoformat(value)
@@ -237,6 +258,7 @@ class GardenManager:
             custom_tasks=list(self.custom_tasks.values()),
             completions=self._completions,
             last_done=self._last_done,
+            adjustments=self._adjustments,
             catalog=self.catalog,
             start=start,
             end=end,
@@ -985,8 +1007,51 @@ class GardenManager:
             notes=notes,
         )
         self.custom_tasks[task.id] = task
+        # A problem that names a repeating job says it comes round too slowly.
+        for series, kind in self._series_in(area_id).items():
+            if reported(kind, f"{title} {notes}"):
+                self._signal(series, Signal(self.today, REPORT, title))
         self._changed()
         return task
+
+    def _series_in(self, area_id: str) -> dict[str, str]:
+        """The repeating jobs in an area: series -> kind."""
+        return {t.series: t.kind for t in self.tasks(area_id) if t.series}
+
+    def _signal(self, series: str, signal: Signal) -> None:
+        """Note what a repeating job did, and adapt its interval if due."""
+        signals = [*self._signals.get(series, []), signal]
+        adjustment, left = adjust(self._adjustments.get(series), signals, self.today)
+        if adjustment is not None:
+            self._adjustments[series] = adjustment
+        self._signals[series] = left
+
+    def adjustments(self, area_id: str | None = None) -> dict[str, Adjustment]:
+        """Adapted intervals, for the whole garden or one area."""
+        if area_id is None:
+            return dict(self._adjustments)
+        return {
+            series: adjustment
+            for series, adjustment in self._adjustments.items()
+            if self._series_area(series) == area_id
+        }
+
+    def _series_area(self, series: str) -> str | None:
+        source, ident = series.split(":")[:2]
+        if source == "area":
+            return ident
+        planting = self.plantings.get(ident)
+        return planting.area_id if planting else None
+
+    def reset_adjustments(self, area_id: str | None = None) -> list[str]:
+        """Back to the usual intervals; returns the series reset."""
+        reset = list(self.adjustments(area_id))
+        for series in reset:
+            self._adjustments.pop(series, None)
+            self._signals.pop(series, None)
+        if reset:
+            self._changed()
+        return reset
 
     def update_custom_task(
         self, task_id: str, *, title: str | None, due: date | None, notes: str | None
@@ -1023,6 +1088,13 @@ class GardenManager:
             planting.planted_on = self.today  # ticking "plant" records the planting
         if task.series:
             self._last_done[task.series] = self.today
+            if self.today < task.start:
+                timing = EARLY
+            elif self.today > task.end:
+                timing = LATE
+            else:
+                timing = ON_TIME
+            self._signal(task.series, Signal(self.today, timing))
         else:
             self._completions[task_id] = self.today
         self._changed()
@@ -1109,6 +1181,15 @@ class GardenManager:
             "projects": [p.to_dict() for p in self.projects.values()],
             "completions": _isos(self._completions),
             "last_done": _isos(self._last_done),
+            "signals": {
+                series: [signal.to_list() for signal in signals]
+                for series, signals in self._signals.items()
+                if signals
+            },
+            "adjustments": {
+                series: [adjustment.factor, adjustment.reason]
+                for series, adjustment in self._adjustments.items()
+            },
             "area_since": _isos(self._area_since),
             "snoozed": {k: v.isoformat() for k, v in self._snoozed.items()},
         }
