@@ -238,10 +238,11 @@ two weeks when none is known), snoozed for a week when ticked.
    after doing them early, later after repeatedly doing them late. Care
    profiles cover shrubs, vines and soft fruit (grape, bramble, currant,
    fig), and plantings without one are matched again at start-up.
-6. **Custom panel (partly built).** Built: the Garden panel with areas,
-   per-area planting plans (deciding proposals in place), the build plan
-   against the budget, and tasks. Still to do: a property map, areas laid
-   out by dragging, with the layout saved.
+6. **Custom panel (built).** The Garden panel: a property map (areas as
+   tiles on a 24-column grid, dragged and resized in edit mode, each
+   area's rectangle stored with the garden and set through
+   `set_area_layout`), areas, per-area planting plans with proposals
+   decided in place, the build plan against the budget, and tasks.
 
 ## Known limits
 
