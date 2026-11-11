@@ -46,8 +46,23 @@ def rank_candidates(typed: str, candidates: list[dict]) -> list[dict]:
     return sorted(candidates, key=key)
 
 
-# Words on a seed packet that describe the packet, not the plant.
-PACKET_WORDS = {"mix", "mixed", "blend", "organic", "heirloom", "seed", "seeds"}
+# Words that describe the packet or the plant's form, not which plant it is:
+# "Organic Mustard Mix", "Rainier Cherry Tree".
+PACKET_WORDS = {
+    "mix",
+    "mixed",
+    "blend",
+    "organic",
+    "heirloom",
+    "seed",
+    "seeds",
+    "tree",
+    "trees",
+    "bush",
+    "bushes",
+    "plant",
+    "plants",
+}
 
 
 def plant_words(text: str) -> list[str]:
@@ -69,7 +84,8 @@ def is_a(record: dict, text: str) -> bool:
     """Whether a plant is the kind the name ends with: a 'Lodi Pumpkin' must
     be some pumpkin, an 'Organic Mustard Mix' some mustard."""
     words = plant_words(text)
-    name = record["common_name"].lower()
+    name = record["common_name"].lower().split(" (")[0]  # not the aside
     return any(
-        re.search(rf"\b{re.escape(form)}", name) for form in name_forms(words[-1])
+        re.search(rf"\b{re.escape(form)}(e?s)?\b", name)
+        for form in name_forms(words[-1])
     )

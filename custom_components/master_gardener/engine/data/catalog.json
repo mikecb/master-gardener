@@ -110,6 +110,49 @@
     ]},
     "wildflower_meadow": {"name": "Wildflower meadow", "rules": [
       {"key": "annual_cut", "kind": "cut", "title": "Cut {name} and remove the clippings", "anchor": "last_frost", "offset_weeks": -8, "window_weeks": 4}
+    ]},
+    "deciduous_shrub": {"name": "Deciduous shrub", "rules": [
+      {"key": "prune", "kind": "prune", "title": "Prune {name} while dormant", "anchor": "last_frost", "offset_weeks": -8, "window_weeks": 6, "detail": "Remove dead, damaged and crossing stems, and on older shrubs a few of the oldest at the base. Shrubs that flower in spring on last year's wood (forsythia, lilac, weigela) are shaped right after flowering instead."},
+      {"key": "mulch", "kind": "mulch", "title": "Refresh mulch around {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 4}
+    ]},
+    "evergreen_shrub": {"name": "Evergreen shrub", "rules": [
+      {"key": "shape", "kind": "prune", "title": "Lightly shape {name}", "anchor": "last_frost", "offset_weeks": 4, "window_weeks": 6, "detail": "After the spring flush of growth. Most evergreens do not regrow from bare wood: never cut back into it."},
+      {"key": "mulch", "kind": "mulch", "title": "Refresh mulch around {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 4},
+      {"key": "winter_water", "kind": "water", "title": "Water {name} deeply before the ground freezes", "anchor": "first_frost", "offset_weeks": 2, "window_weeks": 4, "detail": "Evergreens keep losing water all winter; going in moist prevents winter browning."}
+    ]},
+    "vine": {"name": "Climbing vine", "rules": [
+      {"key": "prune", "kind": "prune", "title": "Prune {name} while dormant", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 5, "detail": "Cut out dead wood and thin crowded stems. Vines that flower in spring on old wood are pruned right after flowering instead."},
+      {"key": "tie_in", "kind": "train", "title": "Tie in and train {name}", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 6, "detail": "Guide new shoots onto the support before they tangle, and check old ties are not cutting in."}
+    ]},
+    "wisteria": {"name": "Wisteria", "rules": [
+      {"key": "winter_prune", "kind": "prune", "title": "Winter-prune {name}", "anchor": "last_frost", "offset_weeks": -10, "window_weeks": 6, "detail": "Shorten last summer's pruned shoots to two or three buds: these become the flowering spurs."},
+      {"key": "summer_prune", "kind": "prune", "title": "Summer-prune {name}", "anchor": "last_frost", "offset_weeks": 12, "window_weeks": 4, "detail": "Cut this year's long, whippy shoots back to five or six leaves."}
+    ]},
+    "clematis": {"name": "Clematis", "rules": [
+      {"key": "prune", "kind": "prune", "title": "Prune {name}", "anchor": "last_frost", "offset_weeks": -6, "window_weeks": 4, "detail": "Depends on its group. Late-flowering (group 3): cut all stems back to about a foot. Large-flowered (group 2): trim lightly to strong buds. Early spring flowerers (group 1): leave until after they bloom."},
+      {"key": "feed", "kind": "fertilize", "title": "Fertilize {name}", "anchor": "last_frost", "offset_weeks": 0, "window_weeks": 3},
+      {"key": "tie_in", "kind": "train", "title": "Tie in and train {name}", "anchor": "last_frost", "offset_weeks": 2, "window_weeks": 6}
+    ]},
+    "grape": {"name": "Grape vine", "rules": [
+      {"key": "prune", "kind": "prune", "title": "Dormant-prune {name}", "anchor": "last_frost", "offset_weeks": -10, "window_weeks": 5, "detail": "Cut last year's canes back to two-bud spurs, or keep one or two long canes on a cane-pruned vine. Finish before the buds swell, or the cuts bleed."},
+      {"key": "canopy", "kind": "thin", "title": "Thin shoots and leaves on {name}", "anchor": "last_frost", "offset_weeks": 10, "window_weeks": 4, "detail": "Open the canopy around the clusters for air and sun, and rub off extra shoots."},
+      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "first_frost", "offset_weeks": -8, "window_weeks": 6, "detail": "Taste first: grapes do not ripen further once picked."}
+    ]},
+    "bramble": {"name": "Raspberry or blackberry", "rules": [
+      {"key": "thin", "kind": "thin", "title": "Thin and tie in canes on {name}", "anchor": "last_frost", "offset_weeks": -4, "window_weeks": 4, "detail": "Keep the strongest canes, about four to six per foot of row."},
+      {"key": "mulch", "kind": "mulch", "title": "Mulch {name}", "anchor": "last_frost", "offset_weeks": 0, "window_weeks": 3},
+      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "last_frost", "offset_weeks": 9, "window_weeks": 6, "detail": "Summer-bearing kinds; everbearing raspberries fruit again in autumn."},
+      {"key": "cut_fruited", "kind": "prune", "title": "Cut out the canes that fruited on {name}", "anchor": "last_frost", "offset_weeks": 16, "window_weeks": 6, "detail": "Cut them to the ground once they finish: this year's new canes fruit next year."}
+    ]},
+    "currant": {"name": "Currant or gooseberry", "rules": [
+      {"key": "prune", "kind": "prune", "title": "Prune {name} while dormant", "anchor": "last_frost", "offset_weeks": -8, "window_weeks": 5, "detail": "Remove stems older than three years and keep the centre open."},
+      {"key": "feed", "kind": "mulch", "title": "Mulch and feed {name}", "anchor": "last_frost", "offset_weeks": -1, "window_weeks": 3},
+      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "last_frost", "offset_weeks": 10, "window_weeks": 4}
+    ]},
+    "fig": {"name": "Fig", "rules": [
+      {"key": "prune", "kind": "prune", "title": "Prune {name}", "anchor": "last_frost", "offset_weeks": -2, "window_weeks": 4, "detail": "Late, so winter damage shows: remove dead wood and crowded stems."},
+      {"key": "harvest", "kind": "harvest", "title": "Harvest {name}", "anchor": "last_frost", "offset_weeks": 14, "window_weeks": 8, "detail": "Ripe figs droop on their stalks and soften."},
+      {"key": "protect", "kind": "mulch", "title": "Mulch or wrap {name} for winter", "anchor": "first_frost", "offset_weeks": 0, "window_weeks": 3, "detail": "Where winters reach the low teens F (zone 7 and colder), mulch the base deeply or wrap the plant."}
     ]}
   }
 }

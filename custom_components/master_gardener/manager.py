@@ -206,6 +206,9 @@ class GardenManager:
         for planting in self.plantings.values():
             if not planting.plant_data and planting.plant in self.catalog.profiles:
                 planting.profile = planting.profile or planting.plant
+            # Plants that had no care profile may match one added since.
+            if planting.plant_data and not planting.profile:
+                planting.profile = care_profile(planting.plant_data)
         # Remember when each area was first seen so we never invent a backlog.
         new = [a for a in self.area_subentries if a.subentry_id not in self._area_since]
         for subentry in new:
@@ -592,7 +595,7 @@ class GardenManager:
         if not self.plants.ready:
             return seeds
         for name in {s.name for s in seeds} - set(self._seed_records):
-            self._seed_records[name] = await self._async_seed_plant(name)
+            self._seed_records[name] = await self._async_closest_plant(name)
         return [
             replace(
                 s,
@@ -602,7 +605,7 @@ class GardenManager:
             for s in seeds
         ]
 
-    async def _async_seed_plant(self, name: str) -> tuple[dict | None, bool]:
+    async def _async_closest_plant(self, name: str) -> tuple[dict | None, bool]:
         """The catalogue plant a packet is, or else the closest one.
 
         Packets name varieties the catalogue may not have ("Blush Cherry
@@ -920,6 +923,7 @@ class GardenManager:
             self._changed()
         else:
             self.async_notify()
+        await self._async_profile_by_name()
         if self.seed_inventory and (changed or not self._seed_records):
             # Seed names are matched against the catalogue, which may only
             # just have arrived: match what is held again, or read it now.
@@ -931,6 +935,26 @@ class GardenManager:
                 self.async_refresh()
                 self._propose_from_seeds()
         return changed
+
+    async def _async_profile_by_name(self) -> None:
+        """Upkeep for plantings the catalogue did not know when they were added.
+
+        Each gets the care profile of the closest catalogue plant to its name
+        ("Rainier Cherry Tree": a cherry, so stone fruit). Only the profile:
+        the planting stays as it was.
+        """
+        if not self.plants.ready:
+            return
+        found = False
+        for planting in list(self.plantings.values()):
+            if planting.plant_data or planting.profile:
+                continue
+            record, _ = await self._async_closest_plant(planting.name)
+            if record and (profile := care_profile(record)):
+                planting.profile = profile
+                found = True
+        if found:
+            self._changed()
 
     def set_planting_status(
         self,

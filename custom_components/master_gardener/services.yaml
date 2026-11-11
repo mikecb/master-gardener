@@ -149,8 +149,15 @@ add_planting:
             - azalea
             - blueberry
             - boxwood
+            - bramble
+            - clematis
             - conifer
+            - currant
+            - deciduous_shrub
             - deciduous_tree
+            - evergreen_shrub
+            - fig
+            - grape
             - hydrangea
             - japanese_maple
             - lavender
@@ -162,7 +169,9 @@ add_planting:
             - rose
             - spring_bulb
             - strawberry
+            - vine
             - wildflower_meadow
+            - wisteria
 
 search_plants:
   name: Search plants

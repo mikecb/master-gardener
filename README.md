@@ -262,12 +262,19 @@ works too when only one plant has it.
 OpenPlantDB supplies each plant's sowing or planting time and, for edibles,
 days to harvest. It has nothing on upkeep, so Master Gardener matches each
 plant to one of its own **care profiles** for pruning, feeding, mowing and
-fruit harvest: apple or pear, stone fruit, blueberry, strawberry, deciduous
-tree, Japanese maple, conifer, pine, evergreen hedge, azalea, hydrangea, rose,
-lavender, perennial, ornamental grass, spring bulb, lawn, wildflower meadow.
-The match is by botanical name and type; override it with `care_profile` when
-adding a planting. Shrubs, vines and houseplants outside those groups get
-planting tasks only.
+fruit harvest: apple or pear, stone fruit, blueberry, strawberry, grape,
+raspberry or blackberry, currant or gooseberry, fig, deciduous tree,
+Japanese maple, conifer, pine, evergreen hedge, deciduous shrub, evergreen
+shrub, azalea, hydrangea, rose, lavender, climbing vine, wisteria, clematis,
+perennial, ornamental grass, spring bulb, lawn, wildflower meadow. The match
+is by botanical name and type; override it with `care_profile` when adding a
+planting (or under **Manage plantings > Change its details**). Tropical and
+indoor plants, succulents, orchids and annuals get planting tasks only.
+
+A planting the catalogue had no record for, or one added before a fitting
+profile existed, is matched again when Master Gardener starts: "Rainier
+Cherry Tree" takes the stone-fruit upkeep of the catalogue's Rainier Cherry.
+Only the care profile is filled in, and one you chose yourself is kept.
 
 A perennial's **Plant …** task comes round each year until you tick it off or
 give the planting a planted date.
