@@ -90,6 +90,61 @@ class CatalogTest(unittest.TestCase):
             self.assertFalse(keys & {"start", "sow", "plant"})
 
 
+class ShrubAndVineProfileTest(unittest.TestCase):
+    def profile(self, scientific, subcategory, category="flower"):
+        return care_profile(
+            {
+                "scientific_name": scientific,
+                "subcategory": subcategory,
+                "season": "perennial",
+                "category": category,
+            }
+        )
+
+    def test_fruit_by_genus(self):
+        self.assertEqual(
+            self.profile("Vitis vinifera 'Crimson'", "grape", "fruit"), "grape"
+        )
+        self.assertEqual(
+            self.profile("Rubus idaeus 'Killarney'", "bramble", "berry"), "bramble"
+        )
+        self.assertEqual(
+            self.profile("Ribes nigrum 'Ben Avon'", "currant", "berry"), "currant"
+        )
+        self.assertEqual(self.profile("Ficus carica 'Excel'", "fig", "fruit"), "fig")
+        # Other figs are houseplants.
+        self.assertIsNone(self.profile("Ficus lyrata", "tropical houseplant"))
+
+    def test_climbers(self):
+        self.assertEqual(
+            self.profile("Wisteria floribunda", "perennial vine"), "wisteria"
+        )
+        self.assertEqual(
+            self.profile("Clematis 'Silver Moon'", "perennial vine"), "clematis"
+        )
+        self.assertEqual(self.profile("Parthenocissus thomsonii", "shade vine"), "vine")
+        self.assertEqual(self.profile("Smilax china", "thorny climbing vine"), "vine")
+        self.assertIsNone(self.profile("Monstera deliciosa", "shade tropical vine"))
+
+    def test_shrubs(self):
+        self.assertEqual(
+            self.profile("Physocarpus opulifolius", "native ornamental shrub"),
+            "deciduous_shrub",
+        )
+        self.assertEqual(
+            self.profile("Aucuba japonica", "evergreen shade shrub"), "evergreen_shrub"
+        )
+        self.assertEqual(
+            self.profile("Teucrium x lucidrys", "Mediterranean sub-shrub"), "lavender"
+        )
+        self.assertIsNone(self.profile("Hibiscus rosa-sinensis", "tropical shrub"))
+        self.assertIsNone(self.profile("Aloe vera", "succulent shrub"))
+        # Names still come first: an azalea is an azalea, not a shrub.
+        self.assertEqual(
+            self.profile("Rhododendron 'Hino'", "evergreen shrub"), "azalea"
+        )
+
+
 class ClimateTest(unittest.TestCase):
     def test_frost_dates_from_zone(self):
         self.assertEqual(frost_dates_for_zone("7a"), ("04-10", "10-25"))

@@ -53,6 +53,10 @@ STRUCTURE_PROFILES = {
     "azalea",
     "hydrangea",
     "rose",
+    "deciduous_shrub",
+    "evergreen_shrub",
+    "currant",
+    "fig",
 }
 STRUCTURE_WORDS = ("tree", "shrub", "conifer", "hedge")
 # A plant is bought in the weeks before its planting window opens.

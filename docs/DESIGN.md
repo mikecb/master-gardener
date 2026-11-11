@@ -233,10 +233,11 @@ two weeks when none is known), snoozed for a week when ticked.
    to the wishlist, spending or budget reshuffles the plan. Seed inventory:
    see phase 3. Still to do: replacing a dead planting through the plan
    (today the agent proposes the replacement).
-5. **Adaptive maintenance (mostly built).** Built: repeating jobs adapt
-   their interval (`engine/adapt.py`): sooner after reported problems that
-   name them or after doing them early, later after repeatedly doing them
-   late. Still to do: care profiles for shrubs and vines.
+5. **Adaptive maintenance (built).** Repeating jobs adapt their interval
+   (`engine/adapt.py`): sooner after reported problems that name them or
+   after doing them early, later after repeatedly doing them late. Care
+   profiles cover shrubs, vines and soft fruit (grape, bramble, currant,
+   fig), and plantings without one are matched again at start-up.
 6. **Custom panel.** Property map, per-area planting plans, roadmap and budget
    views.
 
@@ -245,8 +246,11 @@ two weeks when none is known), snoozed for a week when ticked.
 - Northern hemisphere only (spring frost must precede autumn frost).
 - Plant timing is only as good as OpenPlantDB, which is large but compiled
   largely by automated means and not independently verified.
-- About 55% of catalogue plants match no care profile (most shrubs, vines,
-  tropicals and annuals) and get planting tasks only.
+- About 43% of catalogue plants match no care profile (mostly tropicals,
+  houseplants, succulents, orchids and annuals) and get planting tasks only.
+  Shrubs and vines are matched by type words; where pruning depends on
+  something the catalogue does not record (old or new wood, a clematis
+  group) the task's detail says how to tell.
 - For seedlings started indoors the database gives the sowing time only;
   the plant-out date is derived from frost tolerance.
 - Its `spring` and `fall` planting anchors are read as the frost dates.

@@ -314,3 +314,71 @@ async def test_service_rejects_non_area_device(hass, entry):
         await hass.services.async_call(
             DOMAIN, "add_task", {"area": garden.id, "title": "x"}, blocking=True
         )
+
+
+async def test_new_care_profiles_reach_existing_plantings(hass, entry, hass_storage):
+    """A planting stored with no profile gets one that has since been added."""
+    fig = {
+        "slug": "brown-turkey-fig",
+        "common_name": "Brown Turkey Fig",
+        "scientific_name": "Ficus carica 'Brown Turkey'",
+        "category": "fruit",
+        "subcategory": "fig",
+        "season": "perennial",
+        "sow_method": "transplant",
+        "plant_anchor": "spring",
+        "plant_weeks_min": 0,
+        "plant_weeks_max": 4,
+        "plant_note": "",
+        "frost_tolerance": "half-hardy",
+        "maturity_from": "transplant",
+        "maturity_days_min": None,
+        "maturity_days_max": None,
+    }
+    hass_storage[f"{DOMAIN}.{entry.entry_id}"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{entry.entry_id}",
+        "data": {
+            "plantings": [
+                {
+                    "id": "fig1",
+                    "area_id": "veg",
+                    "name": "Brown Turkey Fig",
+                    "plant": "brown-turkey-fig",
+                    "plant_data": fig,
+                    "profile": None,
+                    "established": True,
+                }
+            ]
+        },
+    }
+    await _setup(hass, entry)
+    assert entry.runtime_data.plantings["fig1"].profile == "fig"
+
+
+async def test_plantings_the_catalogue_did_not_know_get_a_profile(
+    hass, entry, hass_storage
+):
+    """Added by name only: the closest catalogue plant lends its upkeep."""
+    hass_storage[f"{DOMAIN}.{entry.entry_id}"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{entry.entry_id}",
+        "data": {
+            "plantings": [
+                {"id": "a", "area_id": "veg", "name": "Grandpa's Apple Tree"},
+                {"id": "b", "area_id": "veg", "name": "Mystery shrub thing"},
+                {
+                    "id": "c",
+                    "area_id": "veg",
+                    "name": "Old rose",
+                    "profile": "lavender",  # chosen by hand: kept
+                },
+            ]
+        },
+    }
+    await _setup(hass, entry)
+    plantings = entry.runtime_data.plantings
+    assert plantings["a"].profile == "apple"
+    assert plantings["a"].plant is None  # only the profile is borrowed
+    assert plantings["b"].profile is None
+    assert plantings["c"].profile == "lavender"

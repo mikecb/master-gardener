@@ -146,6 +146,12 @@ _BY_NAME = {
     "hyacinthus": "spring_bulb",
     "galanthus": "spring_bulb",
     "muscari": "spring_bulb",
+    "vitis": "grape",
+    "rubus": "bramble",
+    "ribes": "currant",
+    "ficus carica": "fig",
+    "wisteria": "wisteria",
+    "clematis": "clematis",
 }
 # Words in the subcategory -> care profile, first match wins.
 _BY_TYPE = (
@@ -159,6 +165,19 @@ _BY_TYPE = (
     ("groundcover", "perennial"),
     ("daylily", "perennial"),
     ("iris", "perennial"),
+)
+# Shrubs and vines grown indoors here, or too unlike garden ones to share a
+# pruning calendar, get no shrub or vine profile.
+_INDOOR = (
+    "tropical",
+    "houseplant",
+    "indoor",
+    "succulent",
+    "cactus",
+    "orchid",
+    "bromeliad",
+    "epiphytic",
+    "aquatic",
 )
 
 
@@ -180,4 +199,12 @@ def care_profile(record: dict) -> str | None:
     for word, profile in _BY_TYPE:
         if word in subcategory:
             return profile
+    if any(word in subcategory for word in _INDOOR):
+        return None
+    if "vine" in subcategory or "climb" in subcategory:
+        return "vine"
+    if "sub shrub" in subcategory or "mediterranean" in subcategory:
+        return "lavender"  # woody, evergreen, never cut into bare wood
+    if "shrub" in subcategory or "hedge" in subcategory:
+        return "evergreen_shrub" if "evergreen" in subcategory else "deciduous_shrub"
     return None
