@@ -9,7 +9,7 @@ do when, what to buy next, and it adjusts to sensors and to your feedback.
 | Question | Decision |
 | --- | --- |
 | Where the judgment comes from | Split. A deterministic engine in the integration owns facts, dates, thresholds and (later) budget phasing. Design judgment comes from an external AI agent that reads and writes the garden through the integration's actions, guided by `skills/master-gardener/SKILL.md`. The integration never calls an AI service itself, so it needs no API key and the calendar never depends on one. |
-| Interface | Native Home Assistant first: devices, calendar, to-do, sensors, actions, notifications, Assist. A custom sidebar panel is a later phase. |
+| Interface | Native Home Assistant first: devices, calendar, to-do, sensors, actions, notifications, Assist. The Garden sidebar panel (`panel.py`, `frontend/master-gardener-panel.js`) is a view over the same actions: one plain JavaScript module, no build step, no API of its own. |
 | First slice | Areas + calendar (this document's phase 1). |
 
 ## Shape
@@ -238,8 +238,10 @@ two weeks when none is known), snoozed for a week when ticked.
    after doing them early, later after repeatedly doing them late. Care
    profiles cover shrubs, vines and soft fruit (grape, bramble, currant,
    fig), and plantings without one are matched again at start-up.
-6. **Custom panel.** Property map, per-area planting plans, roadmap and budget
-   views.
+6. **Custom panel (partly built).** Built: the Garden panel with areas,
+   per-area planting plans (deciding proposals in place), the build plan
+   against the budget, and tasks. Still to do: a property map, areas laid
+   out by dragging, with the layout saved.
 
 ## Known limits
 

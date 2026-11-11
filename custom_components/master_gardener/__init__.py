@@ -20,6 +20,7 @@ from homeassistant.loader import async_get_integration
 from .const import DOMAIN
 from .engine.catalog import Catalog
 from .manager import GardenConfigEntry, GardenManager
+from .panel import async_register_panel, async_remove_panel
 from .plant_store import REFRESH_ERRORS, PlantStore
 from .services import async_setup_services
 
@@ -124,6 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bo
         async_track_time_interval(hass, update_catalogue, timedelta(days=1))
     )
     entry.async_on_unload(entry.add_update_listener(_async_reload))
+    await async_register_panel(hass, str(integration.version))
     return True
 
 
@@ -134,4 +136,5 @@ async def _async_reload(hass: HomeAssistant, entry: GardenConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: GardenConfigEntry) -> bool:
     await entry.runtime_data.async_save()  # a reload re-reads the file
+    async_remove_panel(hass)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

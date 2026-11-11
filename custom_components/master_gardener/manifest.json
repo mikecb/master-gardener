@@ -1,13 +1,20 @@
 {
   "domain": "master_gardener",
   "name": "Master Gardener",
-  "codeowners": ["@mikecb"],
+  "codeowners": [
+    "@mikecb"
+  ],
   "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http",
+    "panel_custom"
+  ],
   "documentation": "https://github.com/mikecb/master-gardener",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/mikecb/master-gardener/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.14.0"
+  "version": "0.15.0"
 }
