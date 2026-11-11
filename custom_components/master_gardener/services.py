@@ -37,6 +37,9 @@ from .const import (
     CONF_ZIP_CODE,
     CONF_ZONE,
     DOMAIN,
+    MAP_COLUMNS,
+    MAP_MAX_ROWS,
+    MAP_MIN_SIZE,
 )
 from .engine.climate import frost_dates_for_zone
 from .engine.models import (
@@ -166,6 +169,23 @@ LIST_TASKS_SCHEMA = vol.Schema(
 )
 COMPLETE_TASK_SCHEMA = vol.Schema({vol.Required("task_id"): cv.string})
 RESET_SCHEDULE_SCHEMA = vol.Schema({vol.Optional(ATTR_AREA): cv.string})
+SET_AREA_LAYOUT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_AREA): cv.string,
+        vol.Required("x"): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=MAP_COLUMNS - MAP_MIN_SIZE)
+        ),
+        vol.Required("y"): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=MAP_MAX_ROWS - MAP_MIN_SIZE)
+        ),
+        vol.Required("width"): vol.All(
+            vol.Coerce(int), vol.Range(min=MAP_MIN_SIZE, max=MAP_COLUMNS)
+        ),
+        vol.Required("height"): vol.All(
+            vol.Coerce(int), vol.Range(min=MAP_MIN_SIZE, max=MAP_MAX_ROWS)
+        ),
+    }
+)
 
 
 def _manager(hass: HomeAssistant) -> GardenManager:
@@ -235,6 +255,7 @@ def _area(manager: GardenManager, area: ConfigSubentry, names: dict[str, str]) -
             status: sum(1 for p in plantings if p.status == status)
             for status in PLANTING_STATUSES
         },
+        "layout": manager.layout(area.subentry_id),
         "tasks_due": states.count(DUE) + states.count(OVERDUE),
         "tasks_overdue": states.count(OVERDUE),
     }
@@ -556,6 +577,17 @@ def async_setup_services(hass: HomeAssistant) -> None:
             tasks.append(_task(task, manager, names))
         return {"today": today.isoformat(), "tasks": tasks}
 
+    async def set_area_layout(call: ServiceCall) -> ServiceResponse:
+        manager = _manager(hass)
+        area_id = _area_id(hass, manager, call.data[ATTR_AREA])
+        return manager.set_layout(
+            area_id,
+            call.data["x"],
+            call.data["y"],
+            call.data["width"],
+            call.data["height"],
+        )
+
     async def reset_schedule(call: ServiceCall) -> ServiceResponse:
         manager = _manager(hass)
         reset = manager.reset_adjustments(_optional_area(hass, manager, call))
@@ -597,6 +629,12 @@ def async_setup_services(hass: HomeAssistant) -> None:
             SupportsResponse.OPTIONAL,
         ),
         ("search_plants", search_plants, SEARCH_PLANTS_SCHEMA, SupportsResponse.ONLY),
+        (
+            "set_area_layout",
+            set_area_layout,
+            SET_AREA_LAYOUT_SCHEMA,
+            SupportsResponse.OPTIONAL,
+        ),
         (
             "reset_schedule",
             reset_schedule,

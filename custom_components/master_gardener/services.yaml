@@ -1,6 +1,6 @@
 get_garden:
   name: Get garden
-  description: Return the whole garden at a glance - climate and frost dates and where they came from, this year's budget, the seed on hand, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
+  description: Return the whole garden at a glance - climate and frost dates and where they came from, each area's place on the property map, this year's budget, the seed on hand, every garden area with its style, light, size, character, neighbours, planting and task counts and soil state, plus the care profiles and plant catalogue status. Start here.
 
 list_tasks:
   name: List tasks
@@ -494,3 +494,51 @@ reset_schedule:
       selector:
         device:
           integration: master_gardener
+
+set_area_layout:
+  name: Set area layout
+  description: Place a garden area on the property map in the Garden panel, as a rectangle on a grid 24 cells wide. The panel does this when you drag an area.
+  fields:
+    area:
+      name: Garden area
+      description: Area name or id.
+      required: true
+      selector:
+        device:
+          integration: master_gardener
+    x:
+      name: X
+      description: Left edge, in cells from the left.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 22
+          mode: box
+    y:
+      name: Y
+      description: Top edge, in cells from the top.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 58
+          mode: box
+    width:
+      name: Width
+      description: In cells.
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 24
+          mode: box
+    height:
+      name: Height
+      description: In cells.
+      required: true
+      selector:
+        number:
+          min: 2
+          max: 60
+          mode: box

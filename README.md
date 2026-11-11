@@ -91,8 +91,15 @@ adjustments** puts an area, or everything, back to normal.
 
 ## The Garden panel
 
-Master Gardener adds **Garden** to the sidebar, with four views:
+Master Gardener adds **Garden** to the sidebar, with five views:
 
+- **Map**: the property, each area a tile coloured by its style and marked
+  with what is due, overdue or proposed there, and dashed lines between
+  neighbouring areas. Tap a tile for its plantings. **Edit layout** lets you
+  drag areas to where they are and resize them from the corner; each change
+  is saved as you let go (also possible with **Master Gardener: Set area
+  layout**). Areas you have not placed yet sit wherever there is room,
+  sized from their area, with dashed edges.
 - **Areas**: each garden area with its style, light, size and character,
   what is due or overdue, soil and weather alerts, adjusted schedules, and
   its neighbours; and where your frost dates came from.
@@ -235,6 +242,7 @@ you can give the area's name.
 | `master_gardener.get_plan` | The build plan, year by year, against the budget |
 | `master_gardener.list_plantings` | What grows where, optionally by area or status |
 | `master_gardener.refresh_catalogue` | Download the latest plant catalogue now |
+| `master_gardener.set_area_layout` | Place an area on the property map (the panel does this as you drag) |
 | `master_gardener.reset_schedule` | Put adapted mowing and deadheading intervals back to normal |
 
 ## Use with an AI gardener

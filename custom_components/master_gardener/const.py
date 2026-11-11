@@ -55,6 +55,11 @@ STYLES = [
 ]
 LIGHTS = ["full_sun", "part_shade", "shade", "mixed"]
 
+# The property map is a grid this many columns wide; rows grow as needed.
+MAP_COLUMNS = 24
+MAP_MAX_ROWS = 60
+MAP_MIN_SIZE = 2
+
 # How far back overdue tasks are kept, and how far ahead the calendar plans.
 LOOKBACK_DAYS = 180
 LOOKAHEAD_DAYS = 400

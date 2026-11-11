@@ -37,6 +37,8 @@ from .const import (
     DOMAIN,
     LOOKAHEAD_DAYS,
     LOOKBACK_DAYS,
+    MAP_COLUMNS,
+    MAP_MAX_ROWS,
     SEED_INVENTORY_DOMAIN,
     SUBENTRY_AREA,
 )
@@ -160,6 +162,8 @@ class GardenManager:
         self.plantings: dict[str, Planting] = {}
         self.custom_tasks: dict[str, CustomTask] = {}
         self.projects: dict[str, Project] = {}
+        # Property map: area id -> [x, y, width, height] in grid cells.
+        self._layout: dict[str, list[int]] = {}
         self._completions: dict[str, date] = {}
         self._last_done: dict[str, date] = {}
         # Adaptive maintenance: what each repeating series has told us.
@@ -187,6 +191,7 @@ class GardenManager:
         self.projects = {
             p["id"]: Project.from_dict(p) for p in data.get("projects", [])
         }
+        self._layout = dict(data.get("layout", {}))
         self._completions = _dates(data.get("completions", {}))
         self._last_done = _dates(data.get("last_done", {}))
         self._signals = {
@@ -1020,6 +1025,28 @@ class GardenManager:
         self._changed()
         return planting
 
+    def layout(self, area_id: str) -> dict | None:
+        """Where an area sits on the property map, if it has been placed."""
+        cell = self._layout.get(area_id)
+        if not cell:
+            return None
+        x, y, width, height = cell
+        return {"x": x, "y": y, "width": width, "height": height}
+
+    def set_layout(self, area_id: str, x: int, y: int, width: int, height: int) -> dict:
+        if x + width > MAP_COLUMNS:
+            raise ServiceValidationError(
+                f"The map is {MAP_COLUMNS} cells wide: x + width must not exceed it"
+            )
+        if y + height > MAP_MAX_ROWS:
+            raise ServiceValidationError(
+                f"The map is at most {MAP_MAX_ROWS} cells tall"
+            )
+        self._layout[area_id] = [x, y, width, height]
+        self._save()
+        self.async_notify()
+        return self.layout(area_id)  # type: ignore[return-value]
+
     def add_task(
         self, area_id: str, title: str, due: date | None = None, notes: str = ""
     ) -> CustomTask:
@@ -1203,6 +1230,7 @@ class GardenManager:
             "plantings": [p.to_dict() for p in self.plantings.values()],
             "custom_tasks": [t.to_dict() for t in self.custom_tasks.values()],
             "projects": [p.to_dict() for p in self.projects.values()],
+            "layout": self._layout,
             "completions": _isos(self._completions),
             "last_done": _isos(self._last_done),
             "signals": {
