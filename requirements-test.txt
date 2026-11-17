@@ -4,4 +4,4 @@ pytest-homeassistant-custom-component==0.13.375
 ruff==0.17.4
 # The Garden panel test loads Home Assistant's frontend; match the version
 # pinned by the Home Assistant release above.
-home-assistant-frontend==20260930.5
+home-assistant-frontend==20261028.6
